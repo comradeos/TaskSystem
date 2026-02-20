@@ -1,10 +1,13 @@
-using TaskSystem.Domain.Entities;
-
 namespace TaskSystem.Application.Abstractions;
 
 public interface ITimelineRepository
 {
-    Task AddEventAsync(TimelineEvent evt);
-    Task<IEnumerable<TimelineEvent>> GetByTaskIdAsync(Guid taskId);
-    Task PingAsync();
+    Task AddAsync(TimelineEvent evt, CancellationToken ct = default);
+
+    Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(
+        string entityType,
+        string entityId,
+        CancellationToken ct = default);
+
+    Task PingAsync(CancellationToken ct = default);
 }

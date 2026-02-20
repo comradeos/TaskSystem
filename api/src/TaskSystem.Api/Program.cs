@@ -5,7 +5,7 @@ using TaskSystem.Infrastructure.Mongo;
 using TaskSystem.Infrastructure.Postgres;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using TaskSystem.Api.Controllers;
+using TaskSystem.Application.Tasks;
 
 namespace TaskSystem.Api;
 
@@ -14,13 +14,14 @@ public static class Program
     public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-
+        
         string provider = Require(builder, "CORE_DB_PROVIDER");
 
         await ConfigureCoreDbAsync(builder, provider);
         
         ConfigureTimelineDb(builder);
 
+        builder.Services.AddScoped<IAssignTask, AssignTask>();
         builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
         builder.Services.AddControllers();
         builder.Services.AddFluentValidationAutoValidation();
@@ -50,6 +51,7 @@ public static class Program
 
             builder.Services.AddScoped<ICoreDbConnectionFactory>(_ => new PostgresConnectionFactory(connectionString));
             builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
+            builder.Services.AddScoped<ITaskRepository, PostgresTaskRepository>();
             builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
 
             return;

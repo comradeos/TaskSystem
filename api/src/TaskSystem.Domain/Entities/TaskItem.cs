@@ -1,9 +1,9 @@
 using TaskSystem.Domain.Enums;
-using TaskStatus = TaskSystem.Domain.Enums.TaskStatus; // бо буде конфлікт з System.Threading.Tasks.TaskStatus
+using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Domain.Entities;
 
-public class TaskItem
+public sealed class TaskItem
 {
     public int Id { get; init; }
     public int ProjectId { get; init; }
@@ -12,6 +12,21 @@ public class TaskItem
     public string Description { get; init; } = null!;
     public TaskStatus Status { get; init; }
     public TaskPriority Priority { get; init; }
-    public int? AssigneeId { get; init; }
+    public int? AssigneeId { get; set; }
     public DateTime CreatedAt { get; init; }
+    
+    public void Assign(int assigneeId)
+    {
+        if (assigneeId <= 0)
+        {
+            throw new ArgumentException("AssigneeId must be positive.");
+        }
+
+        if (AssigneeId == assigneeId)
+        {
+            return;
+        }
+
+        AssigneeId = assigneeId;
+    }
 }

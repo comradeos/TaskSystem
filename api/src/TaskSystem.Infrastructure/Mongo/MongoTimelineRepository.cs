@@ -1,43 +1,59 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using TaskSystem.Application.Abstractions;
-using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Infrastructure.Mongo;
 
-public class MongoTimelineRepository : ITimelineRepository
+public sealed class MongoTimelineRepository : ITimelineRepository
 {
-    private readonly IMongoDatabase _database;
     private readonly IMongoCollection<TimelineEvent> _collection;
 
     public MongoTimelineRepository(string connectionString, string databaseName)
     {
-        var client = new MongoClient(connectionString);
-        _database = client.GetDatabase(databaseName);
-        _collection = _database.GetCollection<TimelineEvent>("timeline");
+        MongoClient client = new MongoClient(connectionString);
+        IMongoDatabase? database = client.GetDatabase(databaseName);
+
+        _collection = database.GetCollection<TimelineEvent>("timeline");
+
+        CreateIndexes();
     }
 
-    public async Task AddEventAsync(TimelineEvent timelineEvent)
+    private void CreateIndexes()
     {
-        await _collection.InsertOneAsync(timelineEvent);
+        IndexKeysDefinition<TimelineEvent>? indexKeys = Builders<TimelineEvent>.IndexKeys
+            .Ascending(x => x.EntityType)
+            .Ascending(x => x.EntityId)
+            .Ascending(x => x.OccurredAtUtc);
+
+        CreateIndexModel<TimelineEvent> indexModel = new CreateIndexModel<TimelineEvent>(indexKeys);
+
+        _collection.Indexes.CreateOne(indexModel);
     }
 
-    public async Task<IEnumerable<TimelineEvent>> GetByTaskIdAsync(Guid taskId)
+    public async Task AddAsync(TimelineEvent evt, CancellationToken ct = default)
     {
-        var filter = Builders<TimelineEvent>
-            .Filter.Eq(x => x.TaskId, taskId);
+        Console.WriteLine("TIMELINE WRITE");
+        
+        await _collection.InsertOneAsync(evt, cancellationToken: ct);
+    }
 
-        var events = await _collection
+    public async Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(string entityType, string entityId, CancellationToken ct = default)
+    {
+        FilterDefinition<TimelineEvent>? filter = Builders<TimelineEvent>.Filter.And(
+            Builders<TimelineEvent>.Filter.Eq(x => x.EntityType, entityType),
+            Builders<TimelineEvent>.Filter.Eq(x => x.EntityId, entityId)
+        );
+
+        return await _collection
             .Find(filter)
-            .SortBy(x => x.CreatedAt)
-            .ToListAsync();
-
-        return events;
+            .SortBy(x => x.OccurredAtUtc)
+            .ToListAsync(ct);
     }
 
-    public async Task PingAsync()
+    public async Task PingAsync(CancellationToken ct = default)
     {
-        await _database.RunCommandAsync<BsonDocument>(
-            new BsonDocument("ping", 1));
+        await _collection.Database.RunCommandAsync<BsonDocument>(
+            new BsonDocument("ping", 1),
+            cancellationToken: ct);
     }
 }

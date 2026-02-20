@@ -1,14 +1,13 @@
 using FluentValidation;
+using TaskSystem.Application.DTO.Projects;
 
-namespace TaskSystem.Application.DTO.Projects;
+namespace TaskSystem.Application.Validators;
 
-public sealed class ProjectCreateRequestValidator  : AbstractValidator<ProjectCreateRequest>
+public sealed class ProjectCreateRequestValidator : AbstractValidator<ProjectCreateRequest>
 {
     public ProjectCreateRequestValidator()
     {
         RuleFor(x => x.Name)
-            .Must(x => !string.IsNullOrWhiteSpace(x))
-            .WithMessage("Project name is required.")
             .MinimumLength(3)
             .WithMessage("Project name must be at least 3 characters.")
             .MaximumLength(200)
