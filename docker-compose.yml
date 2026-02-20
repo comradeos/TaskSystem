@@ -1,0 +1,70 @@
+services:
+
+  tasksystem-mongo:
+    image: mongo:7
+    container_name: tasksystem-mongo
+    profiles: ["mongo"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_CORE_DATABASE: ${MONGO_CORE_DATABASE}
+      MONGO_TIMELINE_DATABASE: ${MONGO_TIMELINE_DATABASE}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - core_mongo_data:/data/db
+      - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
+
+  tasksystem-postgre:
+    image: postgres:16
+    container_name: tasksystem-postgre
+    profiles: ["postgre"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_ROOT_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_CORE_DATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - core_postgres_data:/var/lib/postgresql/data
+
+  tasksystem-timeline:
+    image: mongo:7
+    container_name: tasksystem-timeline
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "27018:27017"
+    volumes:
+      - timeline_mongo_data:/data/db
+
+  api:
+    build: ./api
+    container_name: tasksystem-api
+    environment:
+      CORE_DB_PROVIDER: ${CORE_DB_PROVIDER}
+      ConnectionStrings__PostgresCore: Host=tasksystem-postgre;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_ROOT_USERNAME};Password=${POSTGRES_ROOT_PASSWORD}
+      ConnectionStrings__MongoTimeline: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@tasksystem-timeline:27017/?authSource=admin
+      MONGO_TIMELINE_DATABASE: ${MONGO_TIMELINE_DATABASE}
+
+    depends_on:
+      - tasksystem-timeline
+
+    ports:
+      - "5001:8080"
+
+  client:
+    build: ./client
+    container_name: tasksystem-client
+    ports:
+      - "3001:5173"
+    depends_on:
+      - api
+
+volumes:
+  core_mongo_data:
+  core_postgres_data:
+  timeline_mongo_data:
