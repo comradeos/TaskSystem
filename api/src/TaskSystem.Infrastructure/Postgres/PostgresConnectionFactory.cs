@@ -4,15 +4,7 @@ using TaskSystem.Application.Abstractions;
 
 namespace TaskSystem.Infrastructure.Postgres;
 
-public class PostgresConnectionFactory : ICoreDbConnectionFactory
+public class PostgresConnectionFactory(string connectionString) : ICoreDbConnectionFactory
 {
-    private readonly string _connectionString;
-
-    public PostgresConnectionFactory(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
-
-    public IDbConnection CreateConnection()
-        => new NpgsqlConnection(_connectionString);
+    public IDbConnection CreateConnection() => new NpgsqlConnection(connectionString);
 }

@@ -4,6 +4,8 @@ namespace TaskSystem.Application.Abstractions;
 
 public interface IProjectRepository
 {
-    Task CreateAsync(Project project);
+    Task<int> CreateAsync(Project project);
+    Task<Project?> GetByIdAsync(int id);
     Task<IReadOnlyList<Project>> GetAllAsync();
+    Task<bool> ExistsByNameAsync(string name);
 }

@@ -1,117 +1,82 @@
+using TaskSystem.Api.Middleware;
 using TaskSystem.Application.Abstractions;
-using TaskSystem.Infrastructure.Postgres;
+using TaskSystem.Infrastructure.InMemory;
 using TaskSystem.Infrastructure.Mongo;
+using TaskSystem.Infrastructure.Postgres;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using TaskSystem.Api.Controllers;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace TaskSystem.Api;
 
-// ----------------------------------------------------
-// STRICT ENV CONFIG (NO FALLBACK)
-// ----------------------------------------------------
-
-string Require(string key)
+public static class Program
 {
-    var value = builder.Configuration[key];
-    if (string.IsNullOrWhiteSpace(value))
-        throw new InvalidOperationException($"Missing required configuration: {key}");
-    return value;
-}
-
-var provider = Require("CORE_DB_PROVIDER");
-
-// ----------------------------------------------------
-// CORE DATABASE
-// ----------------------------------------------------
-
-if (provider.Equals("postgre", StringComparison.OrdinalIgnoreCase))
-{
-    var connectionString = Require("ConnectionStrings:PostgresCore");
-
-    builder.Services.AddScoped<ICoreDbConnectionFactory>(
-        _ => new PostgresConnectionFactory(connectionString));
-
-    builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
-}
-else if (provider.Equals("mongo", StringComparison.OrdinalIgnoreCase))
-{
-    throw new NotImplementedException("Mongo core provider not implemented yet");
-}
-else
-{
-    throw new InvalidOperationException(
-        $"Unknown CORE_DB_PROVIDER: {provider}");
-}
-
-// ----------------------------------------------------
-// TIMELINE (ALWAYS MONGO)
-// ----------------------------------------------------
-
-var mongoConnection = Require("ConnectionStrings:MongoTimeline");
-var mongoDatabase = Require("MONGO_TIMELINE_DATABASE");
-
-builder.Services.AddSingleton<ITimelineRepository>(
-    _ => new MongoTimelineRepository(mongoConnection, mongoDatabase));
-
-// ----------------------------------------------------
-
-builder.Services.AddEndpointsApiExplorer();
-
-var app = builder.Build();
-
-// ----------------------------------------------------
-// BASIC ENDPOINTS
-// ----------------------------------------------------
-
-app.MapGet("/", () => Results.Ok(new
-{
-    message = "TaskSystem API is running"
-}));
-
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "ok",
-    provider
-}));
-
-// ----------------------------------------------------
-// POSTGRES HEALTH CHECK
-// ----------------------------------------------------
-
-app.MapGet("/health/postgre", (ICoreDbConnectionFactory factory) =>
-{
-    try
+    public static async Task Main(string[] args)
     {
-        using var connection = factory.CreateConnection();
-        connection.Open();
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-        return Results.Ok(new { status = "PostgreSQL connected" });
+        string provider = Require(builder, "CORE_DB_PROVIDER");
+
+        await ConfigureCoreDbAsync(builder, provider);
+        
+        ConfigureTimelineDb(builder);
+
+        builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
+        builder.Services.AddControllers();
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssembly(typeof(Application.DTO.Projects.ProjectCreateRequest).Assembly);
+        builder.Services.AddEndpointsApiExplorer();
+
+        WebApplication app = builder.Build();
+
+        app.UseMiddleware<TraceIdMiddleware>();
+        app.UseMiddleware<GlobalExceptionMiddleware>();
+        app.UseMiddleware<AuthMiddleware>();
+
+        app.MapControllers();
+
+        await app.RunAsync();
     }
-    catch (Exception ex)
+
+    private static async Task ConfigureCoreDbAsync(WebApplicationBuilder builder, string provider)
     {
-        return Results.Problem(
-            title: "PostgreSQL connection failed",
-            detail: ex.Message,
-            statusCode: 500);
+        string rootPassword = Require(builder, "DB_USER_ROOT_DEFAULT_PASSWORD"); // єтот пароль для всех баз данных, которые нужно инициализировать
+        
+        if (provider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+        {
+            string connectionString = Require(builder, "ConnectionStrings:PostgresCore");
+
+            await PostgresSchemaInitializer.InitializeAsync(connectionString, rootPassword);
+
+            builder.Services.AddScoped<ICoreDbConnectionFactory>(_ => new PostgresConnectionFactory(connectionString));
+            builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
+            builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
+
+            return;
+        }
+
+        if (provider.Equals("mongo", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotImplementedException("Mongo core provider not implemented yet.");
+        }
+
+        throw new InvalidOperationException($"Unknown CORE_DB_PROVIDER: {provider}");
     }
-});
 
-// ----------------------------------------------------
-// MONGO HEALTH CHECK (REAL PING)
-// ----------------------------------------------------
-
-app.MapGet("/health/timeline", async (ITimelineRepository repo) =>
-{
-    try
+    private static void ConfigureTimelineDb(WebApplicationBuilder builder)
     {
-        await repo.PingAsync();
-        return Results.Ok(new { status = "Mongo connected" });
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(
-            title: "Mongo connection failed",
-            detail: ex.Message,
-            statusCode: 500);
-    }
-});
+        string mongoConnection = Require(builder, "ConnectionStrings:MongoTimeline");
+        string mongoDatabase = Require(builder, "MONGO_TIMELINE_DATABASE");
 
-app.Run();
+        builder.Services.AddSingleton<ITimelineRepository>(_ => new MongoTimelineRepository(mongoConnection, mongoDatabase));
+    }
+
+    private static string Require(WebApplicationBuilder builder, string key)
+    {
+        string? value = builder.Configuration[key];
+        
+        return string.IsNullOrWhiteSpace(value) 
+            ? throw new InvalidOperationException($"Missing required configuration: {key}") 
+            : value;
+    }
+}

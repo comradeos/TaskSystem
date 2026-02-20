@@ -17,10 +17,10 @@ services:
       - core_mongo_data:/data/db
       - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js:ro
 
-  tasksystem-postgre:
+  tasksystem-postgres:
     image: postgres:16
-    container_name: tasksystem-postgre
-    profiles: ["postgre"]
+    container_name: tasksystem-postgres
+    profiles: ["postgres"]
     environment:
       POSTGRES_USER: ${POSTGRES_ROOT_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
@@ -45,10 +45,11 @@ services:
     build: ./api
     container_name: tasksystem-api
     environment:
-      CORE_DB_PROVIDER: ${CORE_DB_PROVIDER}
-      ConnectionStrings__PostgresCore: Host=tasksystem-postgre;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_ROOT_USERNAME};Password=${POSTGRES_ROOT_PASSWORD}
-      ConnectionStrings__MongoTimeline: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@tasksystem-timeline:27017/?authSource=admin
       MONGO_TIMELINE_DATABASE: ${MONGO_TIMELINE_DATABASE}
+      CORE_DB_PROVIDER: ${CORE_DB_PROVIDER}
+      DB_USER_ROOT_DEFAULT_PASSWORD: ${DB_USER_ROOT_DEFAULT_PASSWORD}
+      ConnectionStrings__PostgresCore: Host=tasksystem-postgres;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_ROOT_USERNAME};Password=${POSTGRES_ROOT_PASSWORD}
+      ConnectionStrings__MongoTimeline: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@tasksystem-timeline:27017/?authSource=admin
 
     depends_on:
       - tasksystem-timeline

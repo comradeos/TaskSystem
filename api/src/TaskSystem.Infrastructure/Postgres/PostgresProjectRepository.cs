@@ -1,36 +1,49 @@
+using System.Data;
 using Dapper;
 using TaskSystem.Application.Abstractions;
 using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Infrastructure.Postgres;
 
-public class PostgresProjectRepository : IProjectRepository
+public class PostgresProjectRepository(ICoreDbConnectionFactory factory) : IProjectRepository
 {
-    private readonly ICoreDbConnectionFactory _factory;
-
-    public PostgresProjectRepository(ICoreDbConnectionFactory factory)
+    public async Task<int> CreateAsync(Project project)
     {
-        _factory = factory;
+        const string sql = "INSERT INTO projects (name, created_at) VALUES (@Name, @CreatedAt) RETURNING id;";
+        
+        using IDbConnection connection = factory.CreateConnection();
+        
+        return await connection.ExecuteScalarAsync<int>(sql, project);
     }
 
-    public async Task CreateAsync(Project project)
+    public async Task<Project?> GetByIdAsync(int id)
     {
-        const string sql = """
-            INSERT INTO projects (id, name, created_at)
-            VALUES (@Id, @Name, @CreatedAt)
-        """;
-
-        using var connection = _factory.CreateConnection();
-        await connection.ExecuteAsync(sql, project);
+        const string sql = "SELECT id, name, created_at AS CreatedAt FROM projects WHERE id = @Id;";
+        
+        using IDbConnection connection = factory.CreateConnection();
+        
+        return await connection.QuerySingleOrDefaultAsync<Project>(sql, new { Id = id });
     }
 
     public async Task<IReadOnlyList<Project>> GetAllAsync()
     {
-        using var connection = _factory.CreateConnection();
+        const string sql = "SELECT id, name, created_at AS CreatedAt FROM projects ORDER BY created_at DESC;";
+        
+        using IDbConnection connection = factory.CreateConnection();
+        
+        IEnumerable<Project> result = await connection.QueryAsync<Project>(sql);
+        
+        return result.AsList();
+    }
+    
+    public async Task<bool> ExistsByNameAsync(string name)
+    {
+        const string sql = "SELECT 1 FROM projects WHERE name = @Name LIMIT 1;";
 
-        var result = await connection.QueryAsync<Project>(
-            "SELECT id, name, created_at AS CreatedAt FROM projects");
+        using IDbConnection connection = factory.CreateConnection();
 
-        return result.ToList();
+        int? result = await connection.QueryFirstOrDefaultAsync<int?>(sql, new { Name = name });
+
+        return result.HasValue;
     }
 }

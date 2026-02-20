@@ -6,8 +6,8 @@ export
 profile:
 	@if [ "$(CORE_DB_PROVIDER)" = "mongo" ]; then \
 		echo mongo; \
-	elif [ "$(CORE_DB_PROVIDER)" = "postgre" ]; then \
-		echo postgre; \
+	elif [ "$(CORE_DB_PROVIDER)" = "postgres" ]; then \
+		echo postgres; \
 	else \
 		echo "Unknown CORE_DB_PROVIDER=$(CORE_DB_PROVIDER)"; \
 		exit 1; \
