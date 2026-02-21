@@ -17,15 +17,18 @@ public static class Program
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
         await ConfigureCoreDbAsync(builder);
-        
         ConfigureTimelineDb(builder);
 
-        builder.Services.AddScoped<IGetTaskHistory, GetTaskHistory>();
-        builder.Services.AddScoped<ICreateProject, CreateProject>();
-        builder.Services.AddScoped<ICreateTask, CreateTask>();
-        builder.Services.AddScoped<IAssignTask, AssignTask>();
-        builder.Services.AddScoped<IChangeTaskStatus, ChangeTaskStatus>();
+        builder.Services.AddScoped<IGetTaskHistoryUseCase, GetTaskHistory>();
+        builder.Services.AddScoped<IGetTaskCommentsUseCase, GetTaskComments>();
+        builder.Services.AddScoped<ICreateProjectUseCase, CreateProject>();
+        builder.Services.AddScoped<ICreateTaskUseCase, CreateTask>();
+        builder.Services.AddScoped<IAssignTaskUseCase, AssignTask>();
+        builder.Services.AddScoped<IChangeTaskStatusUseCase, ChangeTaskStatus>();
+        builder.Services.AddScoped<IAddTaskCommentUseCase, AddTaskComment>();
+
         builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
+
         builder.Services.AddControllers();
         builder.Services.AddFluentValidationAutoValidation();
         builder.Services.AddValidatorsFromAssembly(typeof(Application.DTO.Projects.ProjectCreateRequest).Assembly);
@@ -51,10 +54,13 @@ public static class Program
 
         await PostgresSchemaInitializer.InitializeAsync(connectionString, coreUser, corePassword);
 
-        builder.Services.AddScoped<ICoreDbConnectionFactory>(_ => new PostgresConnectionFactory(connectionString));
+        builder.Services.AddScoped<ICoreDbConnectionFactory>(_ =>
+            new PostgresConnectionFactory(connectionString));
+
         builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
         builder.Services.AddScoped<ITaskRepository, PostgresTaskRepository>();
         builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
+        builder.Services.AddScoped<ICommentRepository, PostgresCommentRepository>();
     }
 
     private static void ConfigureTimelineDb(WebApplicationBuilder builder)
@@ -62,7 +68,8 @@ public static class Program
         string mongoConnection = Require(builder, "ConnectionStrings:MongoTimeline");
         string mongoDatabase = Require(builder, "MONGO_TIMELINE_DATABASE");
 
-        builder.Services.AddSingleton<ITimelineRepository>(_ => new MongoTimelineRepository(mongoConnection, mongoDatabase));
+        builder.Services.AddSingleton<ITimelineRepository>(_ =>
+            new MongoTimelineRepository(mongoConnection, mongoDatabase));
     }
 
     private static string Require(WebApplicationBuilder builder, string key)

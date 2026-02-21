@@ -7,9 +7,12 @@ public sealed class AssignTask(
     ITaskRepository tasks,
     IUserRepository users,
     ITimelineRepository timeline)
-    : IAssignTask
+    : IAssignTaskUseCase
 {
-    public async Task ExecuteAsync(int taskId, int assigneeId, CancellationToken ct = default)
+    public async Task ExecuteAsync(
+        int taskId,
+        int assigneeId,
+        CancellationToken ct = default)
     {
         var task = await tasks.GetByIdAsync(taskId);
         if (task is null)
@@ -22,11 +25,17 @@ public sealed class AssignTask(
         var oldAssignee = task.AssigneeId;
         var oldStatus = task.Status;
 
-        bool changed = task.Assign(assigneeId);
+        bool assigneeChanged = task.Assign(assigneeId);
+        bool statusChanged = oldStatus != task.Status;
+
+        if (!assigneeChanged && !statusChanged)
+            return;
 
         await tasks.UpdateAsync(task, ct);
 
-        if (changed)
+        var occurredAt = DateTime.UtcNow;
+
+        if (assigneeChanged)
         {
             string action = oldAssignee is null
                 ? "Assigned"
@@ -38,19 +47,19 @@ public sealed class AssignTask(
                 NewAssignee = assigneeId
             });
 
-            await timeline.AddAsync(
+            await timeline.TryAddAsync(
                 new TimelineEvent(
                     "Task",
                     task.Id.ToString(),
                     action,
                     data,
-                    DateTime.UtcNow
+                    occurredAt
                 ),
                 ct
             );
         }
 
-        if (oldStatus != task.Status)
+        if (statusChanged)
         {
             string statusData = JsonSerializer.Serialize(new
             {
@@ -58,13 +67,13 @@ public sealed class AssignTask(
                 NewStatus = task.Status
             });
 
-            await timeline.AddAsync(
+            await timeline.TryAddAsync(
                 new TimelineEvent(
                     "Task",
                     task.Id.ToString(),
                     "StatusChanged",
                     statusData,
-                    DateTime.UtcNow
+                    occurredAt
                 ),
                 ct
             );

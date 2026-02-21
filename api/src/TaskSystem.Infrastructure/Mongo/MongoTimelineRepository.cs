@@ -35,13 +35,25 @@ public sealed class MongoTimelineRepository : ITimelineRepository
         var doc = new BsonDocument
         {
             { "EntityType", evt.EntityType },
-            { "EntityId", evt.EntityId }, // теперь всегда будет строкой
+            { "EntityId", evt.EntityId }, // всегда строка
             { "Action", evt.Action },
             { "Data", evt.Data },
             { "OccurredAtUtc", evt.OccurredAtUtc }
         };
 
         await _collection.InsertOneAsync(doc, cancellationToken: ct);
+    }
+
+    public async Task TryAddAsync(TimelineEvent evt, CancellationToken ct = default)
+    {
+        try
+        {
+            await AddAsync(evt, ct);
+        }
+        catch
+        {
+            // best-effort: не падаем наружу
+        }
     }
 
     public async Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(

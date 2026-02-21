@@ -1,17 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Application.DTO.Common;
 using TaskSystem.Application.DTO.Tasks;
 using TaskSystem.Application.Tasks;
+using TaskSystem.Domain.Entities;
+using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("tasks")]
 public sealed class TasksController(
-    ICreateTask createTask,
-    IAssignTask assignTask,
-    IChangeTaskStatus changeTaskStatus,
-    IGetTaskHistory getTaskHistory,
+    ICreateTaskUseCase createTask,
+    IAssignTaskUseCase assigner,
+    IChangeTaskStatusUseCase changeTaskStatus,
+    IGetTaskHistoryUseCase getTaskHistory,
+    IAddTaskCommentUseCase addComment,
+    IGetTaskCommentsUseCase getTaskComments,
     ITaskRepository tasks)
     : ControllerBase
 {
@@ -61,21 +66,64 @@ public sealed class TasksController(
     }
 
     [HttpGet("project/{projectId:int}")]
-    public async Task<ActionResult<IReadOnlyList<TaskItem>>> ListByProject(int projectId)
+    public async Task<ActionResult<PageResponse<TaskItem>>> ListByProject(
+        int projectId,
+        [FromQuery] PageRequest page,
+        [FromQuery] int? status,
+        [FromQuery] int? assigneeId,
+        [FromQuery] string? search,
+        CancellationToken ct)
     {
-        IReadOnlyList<TaskItem> result = await tasks.GetByProjectAsync(projectId);
-        return Ok(result);
+        TaskStatus? parsedStatus = null;
+
+        if (status.HasValue)
+        {
+            if (!Enum.IsDefined(typeof(TaskStatus), status.Value))
+            {
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Invalid status.",
+                    Status = StatusCodes.Status400BadRequest
+                });
+            }
+
+            parsedStatus = (TaskStatus)status.Value;
+        }
+
+        IReadOnlyList<TaskItem> items = await tasks.GetPageByProjectAsync(
+            projectId,
+            page.Page,
+            page.Size,
+            parsedStatus,
+            assigneeId,
+            search,
+            ct);
+
+        long total = await tasks.CountByProjectAsync(
+            projectId,
+            parsedStatus,
+            assigneeId,
+            search,
+            ct);
+
+        return Ok(new PageResponse<TaskItem>
+        {
+            Items = items,
+            Page = page.Page,
+            Size = page.Size,
+            Total = total
+        });
     }
 
     [HttpPost("{id:int}/assign")]
     public async Task<ActionResult> Assign(
         int id,
-        [FromBody] AssignTaskRequest request,
+        [FromBody] AssignRequest request,
         CancellationToken ct)
     {
         try
         {
-            await assignTask.ExecuteAsync(id, request.AssigneeId, ct);
+            await assigner.ExecuteAsync(id, request.AssigneeId, ct);
             return NoContent();
         }
         catch (InvalidOperationException)
@@ -99,7 +147,7 @@ public sealed class TasksController(
     [HttpPost("{id:int}/status")]
     public async Task<ActionResult> ChangeStatus(
         int id,
-        [FromBody] ChangeTaskStatusRequest request,
+        [FromBody] ChangeStatusRequest request,
         CancellationToken ct)
     {
         try
@@ -112,6 +160,81 @@ public sealed class TasksController(
             return NotFound(new ProblemDetails
             {
                 Title = "Task not found or invalid status change.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+    }
+
+    [HttpPost("{id:int}/comments")]
+    public async Task<ActionResult<object>> AddComment(
+        int id,
+        [FromBody] CommentCreateRequest request,
+        CancellationToken ct)
+    {
+        if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj)
+            || userIdObj is not int userId)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Title = "Unauthorized",
+                Status = StatusCodes.Status401Unauthorized
+            });
+        }
+
+        try
+        {
+            int commentId = await addComment.ExecuteAsync(
+                id,
+                userId,
+                request.Text,
+                ct);
+
+            return Ok(new { id = commentId });
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Task not found.",
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+    }
+
+    [HttpGet("{id:int}/comments")]
+    public async Task<ActionResult<PageResponse<TaskComment>>> GetComments(
+        int id,
+        [FromQuery] PageRequest page,
+        CancellationToken ct)
+    {
+        try
+        {
+            IReadOnlyList<TaskComment> all =
+                await getTaskComments.ExecuteAsync(id, ct);
+
+            int total = all.Count;
+
+            int skip = (page.Page - 1) * page.Size;
+            if (skip < 0) skip = 0;
+
+            var items = all
+                .Skip(skip)
+                .Take(page.Size)
+                .ToList();
+
+            return Ok(new PageResponse<TaskComment>
+            {
+                Items = items,
+                Page = page.Page,
+                Size = page.Size,
+                Total = total
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Task not found.",
                 Status = StatusCodes.Status404NotFound
             });
         }

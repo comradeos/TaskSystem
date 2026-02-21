@@ -4,7 +4,7 @@ namespace TaskSystem.Application.Tasks;
 
 public sealed class GetTaskHistory(
     ITimelineRepository timeline)
-    : IGetTaskHistory
+    : IGetTaskHistoryUseCase
 {
     public async Task<IReadOnlyList<TimelineEvent>> ExecuteAsync(
         int taskId,

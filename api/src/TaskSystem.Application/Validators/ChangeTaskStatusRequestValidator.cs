@@ -4,7 +4,7 @@ using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.Validators;
 
-public sealed class ChangeTaskStatusRequestValidator : AbstractValidator<ChangeTaskStatusRequest>
+public sealed class ChangeTaskStatusRequestValidator : AbstractValidator<ChangeStatusRequest>
 {
     public ChangeTaskStatusRequestValidator()
     {

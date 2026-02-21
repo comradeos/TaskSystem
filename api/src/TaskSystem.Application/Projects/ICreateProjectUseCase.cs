@@ -1,6 +1,6 @@
 namespace TaskSystem.Application.Projects;
 
-public interface ICreateProject
+public interface ICreateProjectUseCase
 {
     Task<int> ExecuteAsync(string name, CancellationToken ct = default);
 }

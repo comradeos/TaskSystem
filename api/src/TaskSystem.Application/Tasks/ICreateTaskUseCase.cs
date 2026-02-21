@@ -3,7 +3,7 @@ using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.Tasks;
 
-public interface ICreateTask
+public interface ICreateTaskUseCase
 {
     Task<int> ExecuteAsync(
         int projectId,

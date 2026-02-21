@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Application.DTO.Common;
 using TaskSystem.Application.DTO.Projects;
 using TaskSystem.Application.Projects;
 using TaskSystem.Domain.Entities;
@@ -9,7 +10,7 @@ namespace TaskSystem.Api.Controllers;
 [ApiController]
 [Route("projects")]
 public sealed class ProjectsController(
-    ICreateProject createProject,
+    ICreateProjectUseCase createProject,
     IProjectRepository projects)
     : ControllerBase
 {
@@ -53,11 +54,16 @@ public sealed class ProjectsController(
     }
 
     [HttpGet("list")]
-    public async Task<ActionResult<ProjectListResponse>> List()
+    public async Task<ActionResult<PageResponse<ProjectResponse>>> List(
+        [FromQuery] PageRequest request,
+        CancellationToken ct)
     {
-        IReadOnlyList<Project> projectsList = await projects.GetAllAsync();
+        IReadOnlyList<Project> page =
+            await projects.GetPageAsync(request.Page, request.Size, ct);
 
-        IReadOnlyList<ProjectResponse> projectResponses = projectsList
+        long total = await projects.CountAsync(ct);
+
+        IReadOnlyList<ProjectResponse> items = page
             .Select(p => new ProjectResponse
             {
                 Id = p.Id,
@@ -66,9 +72,12 @@ public sealed class ProjectsController(
             })
             .ToList();
 
-        return Ok(new ProjectListResponse
+        return Ok(new PageResponse<ProjectResponse>
         {
-            Items = projectResponses
+            Items = items,
+            Page = request.Page,
+            Size = request.Size,
+            Total = total
         });
     }
 

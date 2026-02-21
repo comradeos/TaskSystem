@@ -9,7 +9,7 @@ public sealed class CreateTask(
     ITaskRepository tasks,
     IProjectRepository projects,
     ITimelineRepository timeline)
-    : ICreateTask
+    : ICreateTaskUseCase
 {
     public async Task<int> ExecuteAsync(
         int projectId,

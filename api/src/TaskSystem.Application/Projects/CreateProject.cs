@@ -7,7 +7,7 @@ namespace TaskSystem.Application.Projects;
 public sealed class CreateProject(
     IProjectRepository projects,
     ITimelineRepository timeline)
-    : ICreateProject
+    : ICreateProjectUseCase
 {
     public async Task<int> ExecuteAsync(string name, CancellationToken ct = default)
     {
