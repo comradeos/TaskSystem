@@ -16,9 +16,7 @@ public sealed class GlobalExceptionMiddleware(
         }
         catch (Exception ex)
         {
-            string traceId =
-                Activity.Current?.Id ??
-                context.TraceIdentifier;
+            string traceId = Activity.Current?.Id ?? context.TraceIdentifier;
 
             logger.LogError(
                 ex,
@@ -26,8 +24,7 @@ public sealed class GlobalExceptionMiddleware(
                 traceId
             );
 
-            context.Response.StatusCode =
-                StatusCodes.Status500InternalServerError;
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
             context.Response.ContentType =
                 "application/problem+json";

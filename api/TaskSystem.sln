@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskSystem.Application", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskSystem.Infrastructure", "src\TaskSystem.Infrastructure\TaskSystem.Infrastructure.csproj", "{19C89BF5-E2A2-44B0-B649-DC89C7C20014}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskSystem.Tests.Integration", "src\TaskSystem.Tests.Integration\TaskSystem.Tests.Integration.csproj", "{F3A28D01-9EFE-4949-9ADF-4A58D7836621}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,18 @@ Global
 		{19C89BF5-E2A2-44B0-B649-DC89C7C20014}.Release|x64.Build.0 = Release|Any CPU
 		{19C89BF5-E2A2-44B0-B649-DC89C7C20014}.Release|x86.ActiveCfg = Release|Any CPU
 		{19C89BF5-E2A2-44B0-B649-DC89C7C20014}.Release|x86.Build.0 = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|x64.Build.0 = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Debug|x86.Build.0 = Debug|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|x64.ActiveCfg = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|x64.Build.0 = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|x86.ActiveCfg = Release|Any CPU
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -80,5 +94,6 @@ Global
 		{45CAB459-32AB-4641-8365-73E2E6505A83} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{8AC3A24E-527E-484A-B794-57A8F3B6CF86} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{19C89BF5-E2A2-44B0-B649-DC89C7C20014} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F3A28D01-9EFE-4949-9ADF-4A58D7836621} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

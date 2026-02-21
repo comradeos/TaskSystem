@@ -6,14 +6,11 @@ public sealed class TraceIdMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        string traceId =
-            Activity.Current?.Id ??
-            context.TraceIdentifier;
+        string traceId = Activity.Current?.Id ?? context.TraceIdentifier;
 
         context.Response.OnStarting(() =>
         {
-            context.Response.Headers["X-Trace-Id"] =
-                traceId;
+            context.Response.Headers["X-Trace-Id"] = traceId;
 
             return Task.CompletedTask;
         });

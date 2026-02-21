@@ -65,8 +65,7 @@ public class ProjectsController(
         CancellationToken ct
     )
     {
-        IReadOnlyList<Project> page =
-            await projects.GetPageAsync(request.Page, request.Size, ct);
+        IReadOnlyList<Project> page = await projects.GetPageAsync(request.Page, request.Size, ct);
 
         long total = await projects.CountAsync(ct);
 

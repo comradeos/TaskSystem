@@ -1,6 +1,6 @@
 using TaskSystem.Domain.Entities;
-using TaskSystem.Domain.Enums;
 using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
+using TaskPriority = TaskSystem.Domain.Enums.TaskPriority;
 
 namespace TaskSystem.Application.Abstractions;
 
@@ -12,11 +12,19 @@ public interface ITaskRepository
         string description,
         TaskStatus status,
         TaskPriority priority,
-        int? assigneeId);
+        int? assigneeId,
+        CancellationToken ct = default
+    );
 
-    Task<TaskItem?> GetByIdAsync(int id);
+    Task<TaskItem?> GetByIdAsync(
+        int id,
+        CancellationToken ct = default
+    );
 
-    Task<IReadOnlyList<TaskItem>> GetByProjectAsync(int projectId);
+    Task<IReadOnlyList<TaskItem>> GetByProjectAsync(
+        int projectId,
+        CancellationToken ct = default
+    );
 
     Task<IReadOnlyList<TaskItem>> GetPageByProjectAsync(
         int projectId,
@@ -25,14 +33,27 @@ public interface ITaskRepository
         TaskStatus? status = null,
         int? assigneeId = null,
         string? search = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
     Task<long> CountByProjectAsync(
         int projectId,
         TaskStatus? status = null,
         int? assigneeId = null,
         string? search = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
-    Task UpdateAsync(TaskItem task, CancellationToken ct = default);
+    Task<IReadOnlyList<TaskItem>> GetAllByProjectAsync(
+        int projectId,
+        TaskStatus? status = null,
+        int? assigneeId = null,
+        string? search = null,
+        CancellationToken ct = default
+    );
+
+    Task UpdateAsync(
+        TaskItem task,
+        CancellationToken ct = default
+    );
 }

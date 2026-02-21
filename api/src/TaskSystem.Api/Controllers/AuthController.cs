@@ -38,8 +38,7 @@ public class AuthController(
             );
         }
 
-        bool passwordValid =
-            BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+        bool passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
 
         if (!passwordValid)
         {

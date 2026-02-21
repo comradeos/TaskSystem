@@ -17,15 +17,15 @@ public class PostgresTaskRepository(
         string description,
         TaskStatus status,
         TaskPriority priority,
-        int? assigneeId
+        int? assigneeId,
+        CancellationToken ct = default
     )
     {
         using IDbConnection connection = factory.CreateConnection();
 
         connection.Open();
 
-        using IDbTransaction transaction =
-            connection.BeginTransaction();
+        using IDbTransaction transaction = connection.BeginTransaction();
 
         try
         {
@@ -36,13 +36,9 @@ public class PostgresTaskRepository(
                 FOR UPDATE;
             """;
 
-            int? projectExists =
-                await connection.QueryFirstOrDefaultAsync<int?>(
+            int? projectExists = await connection.QueryFirstOrDefaultAsync<int?>(
                     lockProjectSql,
-                    new
-                    {
-                        ProjectId = projectId
-                    },
+                    new { ProjectId = projectId },
                     transaction
                 );
 
@@ -60,10 +56,7 @@ public class PostgresTaskRepository(
             int currentMax =
                 await connection.ExecuteScalarAsync<int>(
                     nextNumberSql,
-                    new
-                    {
-                        ProjectId = projectId
-                    },
+                    new { ProjectId = projectId },
                     transaction
                 );
 
@@ -121,7 +114,10 @@ public class PostgresTaskRepository(
         }
     }
 
-    public async Task<TaskItem?> GetByIdAsync(int id)
+    public async Task<TaskItem?> GetByIdAsync(
+        int id,
+        CancellationToken ct = default
+    )
     {
         const string sql = """
             SELECT
@@ -140,19 +136,16 @@ public class PostgresTaskRepository(
 
         using IDbConnection connection = factory.CreateConnection();
 
-        TaskItem? task =
-            await connection.QuerySingleOrDefaultAsync<TaskItem>(
-                sql,
-                new
-                {
-                    Id = id
-                }
-            );
-
-        return task;
+        return await connection.QuerySingleOrDefaultAsync<TaskItem>(
+            sql,
+            new { Id = id }
+        );
     }
 
-    public async Task<IReadOnlyList<TaskItem>> GetByProjectAsync(int projectId)
+    public async Task<IReadOnlyList<TaskItem>> GetByProjectAsync(
+        int projectId,
+        CancellationToken ct = default
+    )
     {
         const string sql = """
             SELECT
@@ -175,10 +168,7 @@ public class PostgresTaskRepository(
         IEnumerable<TaskItem> result =
             await connection.QueryAsync<TaskItem>(
                 sql,
-                new
-                {
-                    ProjectId = projectId
-                }
+                new { ProjectId = projectId }
             );
 
         return result.AsList();
@@ -196,15 +186,13 @@ public class PostgresTaskRepository(
     {
         int offset = (page - 1) * size;
 
-        DynamicParameters parameters =
-            new DynamicParameters();
-
+        DynamicParameters parameters = new();
         parameters.Add("ProjectId", projectId);
         parameters.Add("Limit", size);
         parameters.Add("Offset", offset);
 
         string where =
-            BuildWhere(parameters, projectId, status, assigneeId, search);
+            BuildWhere(parameters, status, assigneeId, search);
 
         string sql = $"""
             SELECT
@@ -219,9 +207,50 @@ public class PostgresTaskRepository(
                 created_at AS CreatedAt
             FROM tasks
             {where}
-            ORDER BY number ASC
+            ORDER BY number
             LIMIT @Limit
             OFFSET @Offset;
+        """;
+
+        using IDbConnection connection = factory.CreateConnection();
+
+        IEnumerable<TaskItem> result =
+            await connection.QueryAsync<TaskItem>(
+                sql,
+                parameters
+            );
+
+        return result.AsList();
+    }
+
+    public async Task<IReadOnlyList<TaskItem>> GetAllByProjectAsync(
+        int projectId,
+        TaskStatus? status = null,
+        int? assigneeId = null,
+        string? search = null,
+        CancellationToken ct = default
+    )
+    {
+        DynamicParameters parameters = new();
+        parameters.Add("ProjectId", projectId);
+
+        string where =
+            BuildWhere(parameters, status, assigneeId, search);
+
+        string sql = $"""
+            SELECT
+                id,
+                project_id AS ProjectId,
+                number,
+                title,
+                description,
+                status,
+                priority,
+                assignee_id AS AssigneeId,
+                created_at AS CreatedAt
+            FROM tasks
+            {where}
+            ORDER BY number;
         """;
 
         using IDbConnection connection = factory.CreateConnection();
@@ -243,13 +272,11 @@ public class PostgresTaskRepository(
         CancellationToken ct = default
     )
     {
-        DynamicParameters parameters =
-            new DynamicParameters();
-
+        DynamicParameters parameters = new();
         parameters.Add("ProjectId", projectId);
 
         string where =
-            BuildWhere(parameters, projectId, status, assigneeId, search);
+            BuildWhere(parameters, status, assigneeId, search);
 
         string sql = $"""
             SELECT COUNT(*)
@@ -259,28 +286,23 @@ public class PostgresTaskRepository(
 
         using IDbConnection connection = factory.CreateConnection();
 
-        long count =
-            await connection.ExecuteScalarAsync<long>(
-                sql,
-                parameters
-            );
-
-        return count;
+        return await connection.ExecuteScalarAsync<long>(
+            sql,
+            parameters
+        );
     }
 
     private static string BuildWhere(
         DynamicParameters p,
-        int projectId,
         TaskStatus? status,
         int? assigneeId,
         string? search
     )
     {
         List<string> clauses =
-            new List<string>
-            {
-                "project_id = @ProjectId"
-            };
+        [
+            "project_id = @ProjectId"
+        ];
 
         if (status.HasValue)
         {
@@ -300,10 +322,7 @@ public class PostgresTaskRepository(
             p.Add("Search", $"%{search.Trim()}%");
         }
 
-        string where =
-            "WHERE " + string.Join(" AND ", clauses);
-
-        return where;
+        return "WHERE " + string.Join(" AND ", clauses);
     }
 
     public async Task UpdateAsync(

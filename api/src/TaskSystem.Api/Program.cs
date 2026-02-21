@@ -18,15 +18,12 @@ public static class Program
 
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
-
         builder.Services.AddFluentValidationAutoValidation();
         builder.Services.AddValidatorsFromAssembly(
             typeof(Application.DTO.Projects.ProjectCreateRequest).Assembly
         );
-
         builder.Services.AddUseCases();
         builder.Services.AddSessionStore();
-
         await builder.Services.AddCoreDataAsync(builder.Configuration);
         builder.Services.AddTimelineData(builder.Configuration);
 
@@ -35,7 +32,6 @@ public static class Program
         app.UseMiddleware<TraceIdMiddleware>();
         app.UseMiddleware<GlobalExceptionMiddleware>();
         app.UseMiddleware<AuthMiddleware>();
-
         app.MapControllers();
 
         await app.RunAsync();
@@ -44,7 +40,7 @@ public static class Program
 
 internal static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddUseCases(this IServiceCollection services)
+    public static void AddUseCases(this IServiceCollection services)
     {
         services.AddScoped<IGetTaskHistoryUseCase, GetTaskHistory>();
         services.AddScoped<IGetTaskCommentsUseCase, GetTaskComments>();
@@ -56,21 +52,15 @@ internal static class ServiceCollectionExtensions
         services.AddScoped<IChangeTaskStatusUseCase, ChangeTaskStatus>();
 
         services.AddScoped<IAddTaskCommentUseCase, AddTaskComment>();
-
-        return services;
     }
 
-    public static IServiceCollection AddSessionStore(this IServiceCollection services)
+    public static void AddSessionStore(this IServiceCollection services)
     {
         services.AddSingleton<ISessionStore, InMemorySessionStore>();
-
-        return services;
     }
 
-    public static async Task<IServiceCollection> AddCoreDataAsync(
-        this IServiceCollection services,
-        IConfiguration configuration
-    )
+    public static async Task AddCoreDataAsync(this IServiceCollection services,
+        IConfiguration configuration)
     {
         string connectionString = configuration.Require("ConnectionStrings:PostgresCore");
         string coreUser = configuration.Require("CORE_DATA_USER");
@@ -90,14 +80,9 @@ internal static class ServiceCollectionExtensions
         services.AddScoped<ITaskRepository, PostgresTaskRepository>();
         services.AddScoped<IUserRepository, PostgresUserRepository>();
         services.AddScoped<ICommentRepository, PostgresCommentRepository>();
-
-        return services;
     }
 
-    public static IServiceCollection AddTimelineData(
-        this IServiceCollection services,
-        IConfiguration configuration
-    )
+    public static void AddTimelineData(this IServiceCollection services, IConfiguration configuration)
     {
         string mongoConnection = configuration.Require("ConnectionStrings:MongoTimeline");
         string mongoDatabase = configuration.Require("MONGO_TIMELINE_DATABASE");
@@ -105,8 +90,6 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ITimelineRepository>(
             new MongoTimelineRepository(mongoConnection, mongoDatabase)
         );
-
-        return services;
     }
 }
 
@@ -117,9 +100,7 @@ internal static class ConfigurationExtensions
         string? value = configuration[key];
 
         return string.IsNullOrWhiteSpace(value)
-            ? throw new InvalidOperationException(
-                $"Missing required configuration: {key}"
-              )
+            ? throw new InvalidOperationException($"Missing required configuration: {key}")
             : value;
     }
 }

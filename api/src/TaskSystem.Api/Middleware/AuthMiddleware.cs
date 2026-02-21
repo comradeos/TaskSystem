@@ -16,22 +16,20 @@ public sealed class AuthMiddleware(RequestDelegate next)
         if (path != null && path.StartsWith("/auth/login"))
         {
             await next(context);
+            
             return;
         }
 
-        string? header =
-            context.Request.Headers.Authorization.FirstOrDefault();
+        string? header = context.Request.Headers.Authorization.FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(header) ||
-            !header.StartsWith("Bearer "))
+        if (string.IsNullOrWhiteSpace(header) || !header.StartsWith("Bearer "))
         {
             await WriteUnauthorized(context, "Unauthorized");
+            
             return;
         }
 
-        string token =
-            header["Bearer ".Length..]
-                .Trim();
+        string token = header["Bearer ".Length..].Trim();
 
         UserSession? session = sessions.Get(token);
 
@@ -66,11 +64,9 @@ public sealed class AuthMiddleware(RequestDelegate next)
             }
         };
 
-        context.Response.StatusCode =
-            StatusCodes.Status401Unauthorized;
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
 
-        context.Response.ContentType =
-            "application/problem+json";
+        context.Response.ContentType = "application/problem+json";
 
         await context.Response.WriteAsJsonAsync(problem);
     }
