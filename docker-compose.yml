@@ -13,7 +13,6 @@ services:
     volumes:
       - core_data:/var/lib/postgresql/data
 
-
   timeline-data:
     image: mongo:7
     container_name: timeline-data
@@ -25,7 +24,6 @@ services:
       - "27017:27017"
     volumes:
       - timeline_data:/data/db
-
 
   api:
     build: ./api
@@ -43,7 +41,6 @@ services:
     ports:
       - "5001:8080"
 
-
   client:
     build: ./client
     container_name: tasksystem-client
@@ -53,6 +50,17 @@ services:
     depends_on:
       - api
 
+  migrator:
+    build: ./migrator
+    container_name: tasksystem-migrator
+    environment:
+      ConnectionStrings__PostgresCore: Host=core-data;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable
+      CORE_DATA_USER: ${CORE_DATA_USER}
+      CORE_DATA_PASSWORD: ${CORE_DATA_PASSWORD}
+    depends_on:
+      - core-data
+    profiles:
+      - migrate
 
 volumes:
   core_data:
