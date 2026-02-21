@@ -10,20 +10,21 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("tasks")]
-public sealed class TasksController(
+public class TasksController(
     ICreateTaskUseCase createTask,
     IAssignTaskUseCase assigner,
     IChangeTaskStatusUseCase changeTaskStatus,
     IGetTaskHistoryUseCase getTaskHistory,
     IAddTaskCommentUseCase addComment,
     IGetTaskCommentsUseCase getTaskComments,
-    ITaskRepository tasks)
-    : ControllerBase
+    ITaskRepository tasks
+) : ControllerBase
 {
     [HttpPost("create")]
     public async Task<ActionResult<object>> Create(
         [FromBody] TaskCreateRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         try
         {
@@ -34,7 +35,8 @@ public sealed class TasksController(
                 request.Status,
                 request.Priority,
                 request.AssigneeId,
-                ct);
+                ct
+            );
 
             return Ok(new { id });
         }
@@ -72,7 +74,8 @@ public sealed class TasksController(
         [FromQuery] int? status,
         [FromQuery] int? assigneeId,
         [FromQuery] string? search,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         TaskStatus? parsedStatus = null;
 
@@ -90,21 +93,25 @@ public sealed class TasksController(
             parsedStatus = (TaskStatus)status.Value;
         }
 
-        IReadOnlyList<TaskItem> items = await tasks.GetPageByProjectAsync(
-            projectId,
-            page.Page,
-            page.Size,
-            parsedStatus,
-            assigneeId,
-            search,
-            ct);
+        IReadOnlyList<TaskItem> items =
+            await tasks.GetPageByProjectAsync(
+                projectId,
+                page.Page,
+                page.Size,
+                parsedStatus,
+                assigneeId,
+                search,
+                ct
+            );
 
-        long total = await tasks.CountByProjectAsync(
-            projectId,
-            parsedStatus,
-            assigneeId,
-            search,
-            ct);
+        long total =
+            await tasks.CountByProjectAsync(
+                projectId,
+                parsedStatus,
+                assigneeId,
+                search,
+                ct
+            );
 
         return Ok(new PageResponse<TaskItem>
         {
@@ -119,11 +126,13 @@ public sealed class TasksController(
     public async Task<ActionResult> Assign(
         int id,
         [FromBody] AssignRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         try
         {
             await assigner.ExecuteAsync(id, request.AssigneeId, ct);
+
             return NoContent();
         }
         catch (InvalidOperationException)
@@ -148,11 +157,13 @@ public sealed class TasksController(
     public async Task<ActionResult> ChangeStatus(
         int id,
         [FromBody] ChangeStatusRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         try
         {
             await changeTaskStatus.ExecuteAsync(id, request.Status, ct);
+
             return NoContent();
         }
         catch (InvalidOperationException)
@@ -169,10 +180,11 @@ public sealed class TasksController(
     public async Task<ActionResult<object>> AddComment(
         int id,
         [FromBody] CommentCreateRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
-        if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj)
-            || userIdObj is not int userId)
+        if (!HttpContext.Items.TryGetValue("UserId", out object? userIdObj) ||
+            userIdObj is not int userId)
         {
             return Unauthorized(new ProblemDetails
             {
@@ -183,11 +195,8 @@ public sealed class TasksController(
 
         try
         {
-            int commentId = await addComment.ExecuteAsync(
-                id,
-                userId,
-                request.Text,
-                ct);
+            int commentId =
+                await addComment.ExecuteAsync(id, userId, request.Text, ct);
 
             return Ok(new { id = commentId });
         }
@@ -205,7 +214,8 @@ public sealed class TasksController(
     public async Task<ActionResult<PageResponse<TaskComment>>> GetComments(
         int id,
         [FromQuery] PageRequest page,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         try
         {
@@ -215,12 +225,16 @@ public sealed class TasksController(
             int total = all.Count;
 
             int skip = (page.Page - 1) * page.Size;
-            if (skip < 0) skip = 0;
 
-            var items = all
-                .Skip(skip)
-                .Take(page.Size)
-                .ToList();
+            if (skip < 0)
+            {
+                skip = 0;
+            }
+
+            IReadOnlyList<TaskComment> items =
+                all.Skip(skip)
+                   .Take(page.Size)
+                   .ToList();
 
             return Ok(new PageResponse<TaskComment>
             {
@@ -243,7 +257,8 @@ public sealed class TasksController(
     [HttpGet("{id:int}/history")]
     public async Task<ActionResult<IReadOnlyList<TimelineEvent>>> History(
         int id,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         IReadOnlyList<TimelineEvent> history =
             await getTaskHistory.ExecuteAsync(id, ct);

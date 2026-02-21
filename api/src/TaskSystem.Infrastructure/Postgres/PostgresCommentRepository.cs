@@ -5,15 +5,17 @@ using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Infrastructure.Postgres;
 
-public sealed class PostgresCommentRepository(ICoreDbConnectionFactory factory)
-    : ICommentRepository
+public class PostgresCommentRepository(
+    ICoreDbConnectionFactory factory
+) : ICommentRepository
 {
     public async Task<int> AddAsync(
         int taskId,
         int authorId,
         string text,
         DateTime createdAtUtc,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         const string sql = """
                            INSERT INTO comments (task_id, author_id, content, created_at)
@@ -23,7 +25,7 @@ public sealed class PostgresCommentRepository(ICoreDbConnectionFactory factory)
 
         using IDbConnection connection = factory.CreateConnection();
 
-        var cmd = new CommandDefinition(
+        CommandDefinition cmd = new CommandDefinition(
             sql,
             new
             {
@@ -32,14 +34,18 @@ public sealed class PostgresCommentRepository(ICoreDbConnectionFactory factory)
                 Text = text,
                 CreatedAt = createdAtUtc
             },
-            cancellationToken: ct);
+            cancellationToken: ct
+        );
 
-        return await connection.ExecuteScalarAsync<int>(cmd);
+        int id = await connection.ExecuteScalarAsync<int>(cmd);
+
+        return id;
     }
 
     public async Task<IReadOnlyList<TaskComment>> GetByTaskIdAsync(
         int taskId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         const string sql = """
                            SELECT
@@ -55,12 +61,17 @@ public sealed class PostgresCommentRepository(ICoreDbConnectionFactory factory)
 
         using IDbConnection connection = factory.CreateConnection();
 
-        var cmd = new CommandDefinition(
+        CommandDefinition cmd = new CommandDefinition(
             sql,
-            new { TaskId = taskId },
-            cancellationToken: ct);
+            new
+            {
+                TaskId = taskId
+            },
+            cancellationToken: ct
+        );
 
-        var result = await connection.QueryAsync<TaskComment>(cmd);
+        IEnumerable<TaskComment> result = await connection.QueryAsync<TaskComment>(cmd);
+
         return result.AsList();
     }
 }

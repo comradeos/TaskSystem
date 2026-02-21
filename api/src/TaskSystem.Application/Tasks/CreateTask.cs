@@ -1,15 +1,16 @@
 using System.Text.Json;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Enums;
 using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.Tasks;
 
-public sealed class CreateTask(
+public class CreateTask(
     ITaskRepository tasks,
     IProjectRepository projects,
-    ITimelineRepository timeline)
-    : ICreateTaskUseCase
+    ITimelineRepository timeline
+) : ICreateTaskUseCase
 {
     public async Task<int> ExecuteAsync(
         int projectId,
@@ -18,11 +19,15 @@ public sealed class CreateTask(
         TaskStatus status,
         TaskPriority priority,
         int? assigneeId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var project = await projects.GetByIdAsync(projectId);
+        Project? project = await projects.GetByIdAsync(projectId);
+
         if (project is null)
+        {
             throw new InvalidOperationException("Project not found.");
+        }
 
         int id = await tasks.CreateAsync(
             projectId,
@@ -30,7 +35,8 @@ public sealed class CreateTask(
             description,
             status,
             priority,
-            assigneeId);
+            assigneeId
+        );
 
         string data = JsonSerializer.Serialize(new
         {

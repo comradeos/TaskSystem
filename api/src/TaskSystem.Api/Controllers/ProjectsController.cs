@@ -9,15 +9,16 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("projects")]
-public sealed class ProjectsController(
+public class ProjectsController(
     ICreateProjectUseCase createProject,
-    IProjectRepository projects)
-    : ControllerBase
+    IProjectRepository projects
+) : ControllerBase
 {
     [HttpPost("create")]
     public async Task<ActionResult<ProjectResponse>> Create(
         [FromBody] ProjectCreateRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         try
         {
@@ -26,7 +27,12 @@ public sealed class ProjectsController(
             Project? project = await projects.GetByIdAsync(id);
 
             if (project is null)
-                return Problem(title: "Project creation failed.", statusCode: 500);
+            {
+                return Problem(
+                    title: "Project creation failed.",
+                    statusCode: 500
+                );
+            }
 
             return Ok(new ProjectResponse
             {
@@ -56,7 +62,8 @@ public sealed class ProjectsController(
     [HttpGet("list")]
     public async Task<ActionResult<PageResponse<ProjectResponse>>> List(
         [FromQuery] PageRequest request,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         IReadOnlyList<Project> page =
             await projects.GetPageAsync(request.Page, request.Size, ct);
@@ -87,11 +94,13 @@ public sealed class ProjectsController(
         Project? project = await projects.GetByIdAsync(id);
 
         if (project is null)
+        {
             return NotFound(new ProblemDetails
             {
                 Title = "Project not found.",
                 Status = StatusCodes.Status404NotFound
             });
+        }
 
         return Ok(new ProjectResponse
         {

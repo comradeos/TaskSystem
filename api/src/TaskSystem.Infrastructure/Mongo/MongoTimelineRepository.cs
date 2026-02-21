@@ -4,14 +4,14 @@ using TaskSystem.Application.Abstractions;
 
 namespace TaskSystem.Infrastructure.Mongo;
 
-public sealed class MongoTimelineRepository : ITimelineRepository
+public class MongoTimelineRepository : ITimelineRepository
 {
     private readonly IMongoCollection<BsonDocument> _collection;
 
     public MongoTimelineRepository(string connectionString, string databaseName)
     {
-        var client = new MongoClient(connectionString);
-        var database = client.GetDatabase(databaseName);
+        MongoClient client = new MongoClient(connectionString);
+        IMongoDatabase database = client.GetDatabase(databaseName);
 
         _collection = database.GetCollection<BsonDocument>("timeline");
 
@@ -20,22 +20,24 @@ public sealed class MongoTimelineRepository : ITimelineRepository
 
     private void CreateIndexes()
     {
-        var indexKeys = Builders<BsonDocument>.IndexKeys
-            .Ascending("EntityType")
-            .Ascending("EntityId")
-            .Ascending("OccurredAtUtc");
+        IndexKeysDefinition<BsonDocument> indexKeys =
+            Builders<BsonDocument>.IndexKeys
+                .Ascending("EntityType")
+                .Ascending("EntityId")
+                .Ascending("OccurredAtUtc");
 
-        var indexModel = new CreateIndexModel<BsonDocument>(indexKeys);
+        CreateIndexModel<BsonDocument> indexModel =
+            new CreateIndexModel<BsonDocument>(indexKeys);
 
         _collection.Indexes.CreateOne(indexModel);
     }
 
     public async Task AddAsync(TimelineEvent evt, CancellationToken ct = default)
     {
-        var doc = new BsonDocument
+        BsonDocument doc = new BsonDocument
         {
             { "EntityType", evt.EntityType },
-            { "EntityId", evt.EntityId }, // всегда строка
+            { "EntityId", evt.EntityId },
             { "Action", evt.Action },
             { "Data", evt.Data },
             { "OccurredAtUtc", evt.OccurredAtUtc }
@@ -52,46 +54,66 @@ public sealed class MongoTimelineRepository : ITimelineRepository
         }
         catch
         {
-            // best-effort: не падаем наружу
+            // логгирование ошибки нужно
         }
     }
 
     public async Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(
         string entityType,
         string entityId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var filter = Builders<BsonDocument>.Filter.And(
-            Builders<BsonDocument>.Filter.Eq("EntityType", entityType),
-            Builders<BsonDocument>.Filter.Or(
-                Builders<BsonDocument>.Filter.Eq("EntityId", entityId),
-                int.TryParse(entityId, out var intId)
-                    ? Builders<BsonDocument>.Filter.Eq("EntityId", intId)
-                    : Builders<BsonDocument>.Filter.Exists("___never___")
-            )
-        );
+        FilterDefinition<BsonDocument> entityTypeFilter =
+            Builders<BsonDocument>.Filter.Eq("EntityType", entityType);
 
-        var documents = await _collection
-            .Find(filter)
-            .Sort(Builders<BsonDocument>.Sort.Ascending("OccurredAtUtc"))
-            .ToListAsync(ct);
+        FilterDefinition<BsonDocument> entityIdFilter;
 
-        var result = new List<TimelineEvent>();
-
-        foreach (var doc in documents)
+        if (int.TryParse(entityId, out var intId))
         {
-            var idValue = doc["EntityId"];
-            string entityIdString = idValue.IsInt32
-                ? idValue.AsInt32.ToString()
-                : idValue.AsString;
+            entityIdFilter =
+                Builders<BsonDocument>.Filter.Or(
+                    Builders<BsonDocument>.Filter.Eq("EntityId", entityId),
+                    Builders<BsonDocument>.Filter.Eq("EntityId", intId)
+                );
+        }
+        else
+        {
+            entityIdFilter =
+                Builders<BsonDocument>.Filter.Eq("EntityId", entityId);
+        }
 
-            result.Add(new TimelineEvent(
+        FilterDefinition<BsonDocument> filter =
+            Builders<BsonDocument>.Filter.And(
+                entityTypeFilter,
+                entityIdFilter
+            );
+
+        List<BsonDocument> documents =
+            await _collection
+                .Find(filter)
+                .Sort(
+                    Builders<BsonDocument>.Sort.Ascending("OccurredAtUtc")
+                )
+                .ToListAsync(ct);
+
+        List<TimelineEvent> result = new List<TimelineEvent>();
+
+        foreach (BsonDocument doc in documents)
+        {
+            BsonValue idValue = doc["EntityId"];
+
+            string? entityIdString = idValue.IsInt32 ? idValue.AsInt32.ToString() : idValue.AsString;
+
+            TimelineEvent timelineEvent = new TimelineEvent(
                 doc["EntityType"].AsString,
                 entityIdString,
                 doc["Action"].AsString,
                 doc["Data"].AsString,
                 doc["OccurredAtUtc"].ToUniversalTime()
-            ));
+            );
+
+            result.Add(timelineEvent);
         }
 
         return result;
@@ -101,6 +123,7 @@ public sealed class MongoTimelineRepository : ITimelineRepository
     {
         await _collection.Database.RunCommandAsync<BsonDocument>(
             new BsonDocument("ping", 1),
-            cancellationToken: ct);
+            cancellationToken: ct
+        );
     }
 }

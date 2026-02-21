@@ -4,20 +4,27 @@ using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Application.Projects;
 
-public sealed class CreateProject(
+public class CreateProject(
     IProjectRepository projects,
-    ITimelineRepository timeline)
-    : ICreateProjectUseCase
+    ITimelineRepository timeline
+) : ICreateProjectUseCase
 {
-    public async Task<int> ExecuteAsync(string name, CancellationToken ct = default)
+    public async Task<int> ExecuteAsync(
+        string name,
+        CancellationToken ct = default
+    )
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             throw new ArgumentException("Project name cannot be empty.");
+        }
 
         if (await projects.ExistsByNameAsync(name))
+        {
             throw new InvalidOperationException("Project with this name already exists.");
+        }
 
-        var project = new Project
+        Project project = new Project
         {
             Name = name,
             CreatedAt = DateTime.UtcNow

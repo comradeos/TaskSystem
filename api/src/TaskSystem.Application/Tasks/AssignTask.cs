@@ -1,45 +1,63 @@
 using System.Text.Json;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Domain.Entities;
+using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.Tasks;
 
-public sealed class AssignTask(
+public class AssignTask(
     ITaskRepository tasks,
     IUserRepository users,
-    ITimelineRepository timeline)
-    : IAssignTaskUseCase
+    ITimelineRepository timeline
+) : IAssignTaskUseCase
 {
     public async Task ExecuteAsync(
         int taskId,
         int assigneeId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var task = await tasks.GetByIdAsync(taskId);
+        TaskItem? task = await tasks.GetByIdAsync(taskId);
+
         if (task is null)
+        {
             throw new InvalidOperationException("Task not found.");
+        }
 
-        var user = await users.GetByIdAsync(assigneeId);
+        User? user = await users.GetByIdAsync(assigneeId);
+
         if (user is null)
+        {
             throw new InvalidOperationException("User not found.");
+        }
 
-        var oldAssignee = task.AssigneeId;
-        var oldStatus = task.Status;
+        int? oldAssignee = task.AssigneeId;
+        TaskStatus oldStatus = task.Status;
 
         bool assigneeChanged = task.Assign(assigneeId);
         bool statusChanged = oldStatus != task.Status;
 
         if (!assigneeChanged && !statusChanged)
+        {
             return;
+        }
 
         await tasks.UpdateAsync(task, ct);
 
-        var occurredAt = DateTime.UtcNow;
+        DateTime occurredAt = DateTime.UtcNow;
 
         if (assigneeChanged)
         {
-            string action = oldAssignee is null
-                ? "Assigned"
-                : "Reassigned";
+            string action;
+
+            if (oldAssignee is null)
+            {
+                action = "Assigned";
+            }
+            else
+            {
+                action = "Reassigned";
+            }
 
             string data = JsonSerializer.Serialize(new
             {

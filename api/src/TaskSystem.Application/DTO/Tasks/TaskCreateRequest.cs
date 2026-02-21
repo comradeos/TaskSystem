@@ -3,7 +3,7 @@ using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.DTO.Tasks;
 
-public sealed class TaskCreateRequest
+public class TaskCreateRequest
 {
     public int ProjectId { get; init; }
     public string Title { get; init; } = null!;

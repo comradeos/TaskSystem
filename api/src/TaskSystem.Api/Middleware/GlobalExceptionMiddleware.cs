@@ -3,7 +3,10 @@ using System.Diagnostics;
 
 namespace TaskSystem.Api.Middleware;
 
-public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+public sealed class GlobalExceptionMiddleware(
+    RequestDelegate next,
+    ILogger<GlobalExceptionMiddleware> logger
+)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -13,13 +16,21 @@ public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<Glob
         }
         catch (Exception ex)
         {
-            string traceId = Activity.Current?.Id ?? context.TraceIdentifier;
+            string traceId =
+                Activity.Current?.Id ??
+                context.TraceIdentifier;
 
-            logger.LogError(ex, "Unhandled exception. TraceId: {TraceId}", traceId);
+            logger.LogError(
+                ex,
+                "Unhandled exception. TraceId: {TraceId}",
+                traceId
+            );
 
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            
-            context.Response.ContentType = "application/problem+json";
+            context.Response.StatusCode =
+                StatusCodes.Status500InternalServerError;
+
+            context.Response.ContentType =
+                "application/problem+json";
 
             ProblemDetails problem = new()
             {

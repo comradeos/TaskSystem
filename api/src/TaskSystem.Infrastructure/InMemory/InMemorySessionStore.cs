@@ -4,17 +4,20 @@ using TaskSystem.Domain.Auth;
 
 namespace TaskSystem.Infrastructure.InMemory;
 
-public sealed class InMemorySessionStore : ISessionStore
+public class InMemorySessionStore : ISessionStore
 {
-    private static readonly ConcurrentDictionary<string, UserSession> Sessions = new();
+    private static readonly ConcurrentDictionary<string, UserSession> Sessions =
+        new ConcurrentDictionary<string, UserSession>();
 
-    private static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
+    private static readonly TimeSpan Lifetime =
+        TimeSpan.FromHours(8);
 
     public UserSession Create(int userId, string login)
     {
-        string token = Convert.ToHexString(Guid.NewGuid().ToByteArray());
+        string token =
+            Convert.ToHexString(Guid.NewGuid().ToByteArray());
 
-        UserSession session = new()
+        UserSession session = new UserSession
         {
             Token = token,
             UserId = userId,
@@ -39,9 +42,9 @@ public sealed class InMemorySessionStore : ISessionStore
         {
             return session;
         }
-        
+
         Sessions.TryRemove(token, out _);
-        
+
         return null;
     }
 

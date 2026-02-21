@@ -2,14 +2,10 @@ namespace TaskSystem.Application.Abstractions;
 
 public sealed class TimelineEvent
 {
-    public string EntityType { get; init; } = default!;
-
-    public string EntityId { get; init; } = default!;
-
-    public string Action { get; init; } = default!;
-
-    public string Data { get; init; } = default!;
-
+    public string EntityType { get; init; } = null!;
+    public string EntityId { get; init; } = null!;
+    public string Action { get; init; } = null!;
+    public string Data { get; init; } = null!;
     public DateTime OccurredAtUtc { get; init; }
 
     public TimelineEvent(
@@ -25,7 +21,6 @@ public sealed class TimelineEvent
         Data = data;
         OccurredAtUtc = occurredAtUtc;
     }
-
-    // Пустой конструктор нужен Mongo
+    
     public TimelineEvent() { }
 }

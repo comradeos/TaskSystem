@@ -3,7 +3,7 @@ using TaskSystem.Application.DTO.Tasks;
 
 namespace TaskSystem.Application.Validators;
 
-public sealed class TaskCommentCreateRequestValidator
+public class TaskCommentCreateRequestValidator
     : AbstractValidator<CommentCreateRequest>
 {
     public TaskCommentCreateRequestValidator()

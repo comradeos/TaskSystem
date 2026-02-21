@@ -1,6 +1,6 @@
 namespace TaskSystem.Domain.Auth;
 
-public sealed class UserSession
+public class UserSession
 {
     public string Token { get; init; } = null!;
     public int UserId { get; init; }

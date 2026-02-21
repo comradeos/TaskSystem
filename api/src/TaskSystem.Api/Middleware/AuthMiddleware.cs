@@ -6,7 +6,10 @@ namespace TaskSystem.Api.Middleware;
 
 public sealed class AuthMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context, ISessionStore sessions)
+    public async Task InvokeAsync(
+        HttpContext context,
+        ISessionStore sessions
+    )
     {
         string? path = context.Request.Path.Value;
 
@@ -16,21 +19,28 @@ public sealed class AuthMiddleware(RequestDelegate next)
             return;
         }
 
-        string? header = context.Request.Headers.Authorization.FirstOrDefault();
+        string? header =
+            context.Request.Headers.Authorization.FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(header) || !header.StartsWith("Bearer "))
+        if (string.IsNullOrWhiteSpace(header) ||
+            !header.StartsWith("Bearer "))
         {
             await WriteUnauthorized(context, "Unauthorized");
             return;
         }
 
-        string token = header["Bearer ".Length..].Trim();
+        string token =
+            header["Bearer ".Length..]
+                .Trim();
 
         UserSession? session = sessions.Get(token);
 
         if (session is null)
         {
-            await WriteUnauthorized(context, "Invalid or expired token");
+            await WriteUnauthorized(
+                context,
+                "Invalid or expired token"
+            );
             return;
         }
 
@@ -40,7 +50,10 @@ public sealed class AuthMiddleware(RequestDelegate next)
         await next(context);
     }
 
-    private static async Task WriteUnauthorized(HttpContext context, string title)
+    private static async Task WriteUnauthorized(
+        HttpContext context,
+        string title
+    )
     {
         ProblemDetails problem = new()
         {
@@ -53,8 +66,11 @@ public sealed class AuthMiddleware(RequestDelegate next)
             }
         };
 
-        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode =
+            StatusCodes.Status401Unauthorized;
+
+        context.Response.ContentType =
+            "application/problem+json";
 
         await context.Response.WriteAsJsonAsync(problem);
     }

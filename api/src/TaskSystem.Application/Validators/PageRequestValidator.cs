@@ -3,7 +3,7 @@ using TaskSystem.Application.DTO.Common;
 
 namespace TaskSystem.Application.Validators;
 
-public sealed class PageRequestValidator : AbstractValidator<PageRequest>
+public class PageRequestValidator : AbstractValidator<PageRequest>
 {
     public PageRequestValidator()
     {

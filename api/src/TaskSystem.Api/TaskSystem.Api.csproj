@@ -17,8 +17,4 @@
     <ProjectReference Include="..\TaskSystem.Domain\TaskSystem.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Projects\" />
-  </ItemGroup>
-
 </Project>

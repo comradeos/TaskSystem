@@ -1,30 +1,36 @@
 using System.Text.Json;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Domain.Entities;
 using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Application.Tasks;
 
-public sealed class ChangeTaskStatus(
+public class ChangeTaskStatus(
     ITaskRepository tasks,
-    ITimelineRepository timeline)
-    : IChangeTaskStatusUseCase
+    ITimelineRepository timeline
+) : IChangeTaskStatusUseCase
 {
     public async Task ExecuteAsync(
         int taskId,
         TaskStatus newStatus,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var task = await tasks.GetByIdAsync(taskId);
+        TaskItem? task = await tasks.GetByIdAsync(taskId);
 
         if (task is null)
+        {
             throw new InvalidOperationException("Task not found.");
+        }
 
-        var oldStatus = task.Status;
+        TaskStatus oldStatus = task.Status;
 
         bool changed = task.ChangeStatus(newStatus);
 
         if (!changed)
+        {
             return;
+        }
 
         await tasks.UpdateAsync(task, ct);
 

@@ -3,7 +3,7 @@ using TaskSystem.Application.DTO.Projects;
 
 namespace TaskSystem.Application.Validators;
 
-public sealed class ProjectCreateRequestValidator : AbstractValidator<ProjectCreateRequest>
+public class ProjectCreateRequestValidator : AbstractValidator<ProjectCreateRequest>
 {
     public ProjectCreateRequestValidator()
     {

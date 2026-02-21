@@ -1,12 +1,12 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using TaskSystem.Api.Middleware;
 using TaskSystem.Application.Abstractions;
+using TaskSystem.Application.Projects;
+using TaskSystem.Application.Tasks;
 using TaskSystem.Infrastructure.InMemory;
 using TaskSystem.Infrastructure.Mongo;
 using TaskSystem.Infrastructure.Postgres;
-using FluentValidation;
-using FluentValidation.AspNetCore;
-using TaskSystem.Application.Projects;
-using TaskSystem.Application.Tasks;
 
 namespace TaskSystem.Api;
 
@@ -16,23 +16,19 @@ public static class Program
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-        await ConfigureCoreDbAsync(builder);
-        ConfigureTimelineDb(builder);
-
-        builder.Services.AddScoped<IGetTaskHistoryUseCase, GetTaskHistory>();
-        builder.Services.AddScoped<IGetTaskCommentsUseCase, GetTaskComments>();
-        builder.Services.AddScoped<ICreateProjectUseCase, CreateProject>();
-        builder.Services.AddScoped<ICreateTaskUseCase, CreateTask>();
-        builder.Services.AddScoped<IAssignTaskUseCase, AssignTask>();
-        builder.Services.AddScoped<IChangeTaskStatusUseCase, ChangeTaskStatus>();
-        builder.Services.AddScoped<IAddTaskCommentUseCase, AddTaskComment>();
-
-        builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
-
         builder.Services.AddControllers();
-        builder.Services.AddFluentValidationAutoValidation();
-        builder.Services.AddValidatorsFromAssembly(typeof(Application.DTO.Projects.ProjectCreateRequest).Assembly);
         builder.Services.AddEndpointsApiExplorer();
+
+        builder.Services.AddFluentValidationAutoValidation();
+        builder.Services.AddValidatorsFromAssembly(
+            typeof(Application.DTO.Projects.ProjectCreateRequest).Assembly
+        );
+
+        builder.Services.AddUseCases();
+        builder.Services.AddSessionStore();
+
+        await builder.Services.AddCoreDataAsync(builder.Configuration);
+        builder.Services.AddTimelineData(builder.Configuration);
 
         WebApplication app = builder.Build();
 
@@ -44,40 +40,86 @@ public static class Program
 
         await app.RunAsync();
     }
+}
 
-    private static async Task ConfigureCoreDbAsync(WebApplicationBuilder builder)
+internal static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddUseCases(this IServiceCollection services)
     {
-        string connectionString = Require(builder, "ConnectionStrings:PostgresCore");
+        services.AddScoped<IGetTaskHistoryUseCase, GetTaskHistory>();
+        services.AddScoped<IGetTaskCommentsUseCase, GetTaskComments>();
 
-        string coreUser = Require(builder, "CORE_DATA_USER");
-        string corePassword = Require(builder, "CORE_DATA_PASSWORD");
+        services.AddScoped<ICreateProjectUseCase, CreateProject>();
+        services.AddScoped<ICreateTaskUseCase, CreateTask>();
 
-        await PostgresSchemaInitializer.InitializeAsync(connectionString, coreUser, corePassword);
+        services.AddScoped<IAssignTaskUseCase, AssignTask>();
+        services.AddScoped<IChangeTaskStatusUseCase, ChangeTaskStatus>();
 
-        builder.Services.AddScoped<ICoreDbConnectionFactory>(_ =>
-            new PostgresConnectionFactory(connectionString));
+        services.AddScoped<IAddTaskCommentUseCase, AddTaskComment>();
 
-        builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
-        builder.Services.AddScoped<ITaskRepository, PostgresTaskRepository>();
-        builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
-        builder.Services.AddScoped<ICommentRepository, PostgresCommentRepository>();
+        return services;
     }
 
-    private static void ConfigureTimelineDb(WebApplicationBuilder builder)
+    public static IServiceCollection AddSessionStore(this IServiceCollection services)
     {
-        string mongoConnection = Require(builder, "ConnectionStrings:MongoTimeline");
-        string mongoDatabase = Require(builder, "MONGO_TIMELINE_DATABASE");
+        services.AddSingleton<ISessionStore, InMemorySessionStore>();
 
-        builder.Services.AddSingleton<ITimelineRepository>(_ =>
-            new MongoTimelineRepository(mongoConnection, mongoDatabase));
+        return services;
     }
 
-    private static string Require(WebApplicationBuilder builder, string key)
+    public static async Task<IServiceCollection> AddCoreDataAsync(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
     {
-        string? value = builder.Configuration[key];
+        string connectionString = configuration.Require("ConnectionStrings:PostgresCore");
+        string coreUser = configuration.Require("CORE_DATA_USER");
+        string corePassword = configuration.Require("CORE_DATA_PASSWORD");
+
+        await PostgresSchemaInitializer.InitializeAsync(
+            connectionString,
+            coreUser,
+            corePassword
+        );
+
+        services.AddSingleton<ICoreDbConnectionFactory>(
+            new PostgresConnectionFactory(connectionString)
+        );
+
+        services.AddScoped<IProjectRepository, PostgresProjectRepository>();
+        services.AddScoped<ITaskRepository, PostgresTaskRepository>();
+        services.AddScoped<IUserRepository, PostgresUserRepository>();
+        services.AddScoped<ICommentRepository, PostgresCommentRepository>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddTimelineData(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
+    {
+        string mongoConnection = configuration.Require("ConnectionStrings:MongoTimeline");
+        string mongoDatabase = configuration.Require("MONGO_TIMELINE_DATABASE");
+
+        services.AddSingleton<ITimelineRepository>(
+            new MongoTimelineRepository(mongoConnection, mongoDatabase)
+        );
+
+        return services;
+    }
+}
+
+internal static class ConfigurationExtensions
+{
+    public static string Require(this IConfiguration configuration, string key)
+    {
+        string? value = configuration[key];
 
         return string.IsNullOrWhiteSpace(value)
-            ? throw new InvalidOperationException($"Missing required configuration: {key}")
+            ? throw new InvalidOperationException(
+                $"Missing required configuration: {key}"
+              )
             : value;
     }
 }

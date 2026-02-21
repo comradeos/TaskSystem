@@ -3,14 +3,15 @@ using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Application.Tasks;
 
-public sealed class GetTaskComments(
+public class GetTaskComments(
     ITaskRepository tasks,
-    ICommentRepository comments)
-    : IGetTaskCommentsUseCase
+    ICommentRepository comments
+) : IGetTaskCommentsUseCase
 {
     public async Task<IReadOnlyList<TaskComment>> ExecuteAsync(
         int taskId,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         TaskItem? task = await tasks.GetByIdAsync(taskId);
 

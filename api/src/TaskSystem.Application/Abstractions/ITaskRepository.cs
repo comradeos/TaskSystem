@@ -1,3 +1,4 @@
+using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Enums;
 using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 

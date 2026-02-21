@@ -1,6 +1,6 @@
 namespace TaskSystem.Domain.Entities;
 
-public sealed class TaskComment
+public class TaskComment
 {
     public int Id { get; }
     public int TaskId { get; }
@@ -13,10 +13,16 @@ public sealed class TaskComment
         int taskId,
         int authorId,
         string text,
-        DateTime createdAtUtc)
+        DateTime createdAtUtc
+    )
     {
         if (string.IsNullOrWhiteSpace(text))
-            throw new ArgumentException("Comment text cannot be empty.", nameof(text));
+        {
+            throw new ArgumentException(
+                "Comment text cannot be empty.",
+                nameof(text)
+            );
+        }
 
         Id = id;
         TaskId = taskId;
