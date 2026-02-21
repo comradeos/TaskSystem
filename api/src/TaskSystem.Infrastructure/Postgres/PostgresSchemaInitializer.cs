@@ -7,9 +7,8 @@ namespace TaskSystem.Infrastructure.Postgres;
 public static class PostgresSchemaInitializer
 {
     private const string MigrationFileName = "PostgresSchemaTables.sql";
-    private const string DefaultRootLogin = "root";
 
-    public static async Task InitializeAsync(string connectionString, string rootPassword)
+    public static async Task InitializeAsync(string connectionString, string coreUser, string corePassword)
     {
         await using NpgsqlConnection connection = new(connectionString);
         
@@ -17,7 +16,7 @@ public static class PostgresSchemaInitializer
         
         await ExecuteMigrationAsync(connection);
         
-        await SeedRootUserAsync(connection, rootPassword);
+        await SeedCoreUserAsync(connection, coreUser, corePassword);
     }
 
     private static async Task ExecuteMigrationAsync(NpgsqlConnection connection)
@@ -31,9 +30,11 @@ public static class PostgresSchemaInitializer
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
 
-        string resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(x => x.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
-                ?? throw new InvalidOperationException($"Migration file '{fileName}' not found.");
+        string resourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(x =>
+                x.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Migration file '{fileName}' not found.");
 
         await using Stream stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Unable to load resource '{resourceName}'.");
@@ -43,26 +44,27 @@ public static class PostgresSchemaInitializer
         return await reader.ReadToEndAsync();
     }
 
-    private static async Task SeedRootUserAsync(NpgsqlConnection connection, string rootPassword)
+    private static async Task SeedCoreUserAsync(NpgsqlConnection connection, string login, string password)
     {
         const string existsSql = "SELECT COUNT(*) FROM users WHERE login = @Login";
 
-        int exists = await connection.ExecuteScalarAsync<int>(existsSql, new { Login = DefaultRootLogin });
+        int exists = await connection.ExecuteScalarAsync<int>(
+            existsSql,
+            new { Login = login });
 
         if (exists > 0)
-        {
             return;
-        }
 
-        const string insertSql = "INSERT INTO users (login, password_hash, name, created_at) VALUES (@Login, @PasswordHash, @Name, @CreatedAt)";
+        const string insertSql = "INSERT INTO users (login, password_hash, name, created_at) " +
+                                 "VALUES (@Login, @PasswordHash, @Name, @CreatedAt)";
 
-        string? passwordHash = BCrypt.Net.BCrypt.HashPassword(rootPassword);
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
         await connection.ExecuteAsync(insertSql, new
         {
-            Login = DefaultRootLogin,
+            Login = login,
             PasswordHash = passwordHash,
-            Name = DefaultRootLogin,
+            Name = login,
             CreatedAt = DateTime.UtcNow
         });
     }

@@ -5,6 +5,7 @@ using TaskSystem.Infrastructure.Mongo;
 using TaskSystem.Infrastructure.Postgres;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using TaskSystem.Application.Projects;
 using TaskSystem.Application.Tasks;
 
 namespace TaskSystem.Api;
@@ -14,14 +15,16 @@ public static class Program
     public static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-        
-        string provider = Require(builder, "CORE_DB_PROVIDER");
 
-        await ConfigureCoreDbAsync(builder, provider);
+        await ConfigureCoreDbAsync(builder);
         
         ConfigureTimelineDb(builder);
 
+        builder.Services.AddScoped<IGetTaskHistory, GetTaskHistory>();
+        builder.Services.AddScoped<ICreateProject, CreateProject>();
+        builder.Services.AddScoped<ICreateTask, CreateTask>();
         builder.Services.AddScoped<IAssignTask, AssignTask>();
+        builder.Services.AddScoped<IChangeTaskStatus, ChangeTaskStatus>();
         builder.Services.AddSingleton<ISessionStore, InMemorySessionStore>();
         builder.Services.AddControllers();
         builder.Services.AddFluentValidationAutoValidation();
@@ -39,30 +42,19 @@ public static class Program
         await app.RunAsync();
     }
 
-    private static async Task ConfigureCoreDbAsync(WebApplicationBuilder builder, string provider)
+    private static async Task ConfigureCoreDbAsync(WebApplicationBuilder builder)
     {
-        string rootPassword = Require(builder, "DB_USER_ROOT_DEFAULT_PASSWORD"); // єтот пароль для всех баз данных, которые нужно инициализировать
-        
-        if (provider.Equals("postgres", StringComparison.OrdinalIgnoreCase))
-        {
-            string connectionString = Require(builder, "ConnectionStrings:PostgresCore");
+        string connectionString = Require(builder, "ConnectionStrings:PostgresCore");
 
-            await PostgresSchemaInitializer.InitializeAsync(connectionString, rootPassword);
+        string coreUser = Require(builder, "CORE_DATA_USER");
+        string corePassword = Require(builder, "CORE_DATA_PASSWORD");
 
-            builder.Services.AddScoped<ICoreDbConnectionFactory>(_ => new PostgresConnectionFactory(connectionString));
-            builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
-            builder.Services.AddScoped<ITaskRepository, PostgresTaskRepository>();
-            builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
+        await PostgresSchemaInitializer.InitializeAsync(connectionString, coreUser, corePassword);
 
-            return;
-        }
-
-        if (provider.Equals("mongo", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new NotImplementedException("Mongo core provider not implemented yet.");
-        }
-
-        throw new InvalidOperationException($"Unknown CORE_DB_PROVIDER: {provider}");
+        builder.Services.AddScoped<ICoreDbConnectionFactory>(_ => new PostgresConnectionFactory(connectionString));
+        builder.Services.AddScoped<IProjectRepository, PostgresProjectRepository>();
+        builder.Services.AddScoped<ITaskRepository, PostgresTaskRepository>();
+        builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
     }
 
     private static void ConfigureTimelineDb(WebApplicationBuilder builder)
@@ -76,9 +68,9 @@ public static class Program
     private static string Require(WebApplicationBuilder builder, string key)
     {
         string? value = builder.Configuration[key];
-        
-        return string.IsNullOrWhiteSpace(value) 
-            ? throw new InvalidOperationException($"Missing required configuration: {key}") 
+
+        return string.IsNullOrWhiteSpace(value)
+            ? throw new InvalidOperationException($"Missing required configuration: {key}")
             : value;
     }
 }

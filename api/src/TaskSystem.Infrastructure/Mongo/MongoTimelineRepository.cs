@@ -6,48 +6,83 @@ namespace TaskSystem.Infrastructure.Mongo;
 
 public sealed class MongoTimelineRepository : ITimelineRepository
 {
-    private readonly IMongoCollection<TimelineEvent> _collection;
+    private readonly IMongoCollection<BsonDocument> _collection;
 
     public MongoTimelineRepository(string connectionString, string databaseName)
     {
-        MongoClient client = new MongoClient(connectionString);
-        IMongoDatabase? database = client.GetDatabase(databaseName);
+        var client = new MongoClient(connectionString);
+        var database = client.GetDatabase(databaseName);
 
-        _collection = database.GetCollection<TimelineEvent>("timeline");
+        _collection = database.GetCollection<BsonDocument>("timeline");
 
         CreateIndexes();
     }
 
     private void CreateIndexes()
     {
-        IndexKeysDefinition<TimelineEvent>? indexKeys = Builders<TimelineEvent>.IndexKeys
-            .Ascending(x => x.EntityType)
-            .Ascending(x => x.EntityId)
-            .Ascending(x => x.OccurredAtUtc);
+        var indexKeys = Builders<BsonDocument>.IndexKeys
+            .Ascending("EntityType")
+            .Ascending("EntityId")
+            .Ascending("OccurredAtUtc");
 
-        CreateIndexModel<TimelineEvent> indexModel = new CreateIndexModel<TimelineEvent>(indexKeys);
+        var indexModel = new CreateIndexModel<BsonDocument>(indexKeys);
 
         _collection.Indexes.CreateOne(indexModel);
     }
 
     public async Task AddAsync(TimelineEvent evt, CancellationToken ct = default)
     {
-        Console.WriteLine("TIMELINE WRITE");
-        
-        await _collection.InsertOneAsync(evt, cancellationToken: ct);
+        var doc = new BsonDocument
+        {
+            { "EntityType", evt.EntityType },
+            { "EntityId", evt.EntityId }, // теперь всегда будет строкой
+            { "Action", evt.Action },
+            { "Data", evt.Data },
+            { "OccurredAtUtc", evt.OccurredAtUtc }
+        };
+
+        await _collection.InsertOneAsync(doc, cancellationToken: ct);
     }
 
-    public async Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(string entityType, string entityId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TimelineEvent>> GetByEntityAsync(
+        string entityType,
+        string entityId,
+        CancellationToken ct = default)
     {
-        FilterDefinition<TimelineEvent>? filter = Builders<TimelineEvent>.Filter.And(
-            Builders<TimelineEvent>.Filter.Eq(x => x.EntityType, entityType),
-            Builders<TimelineEvent>.Filter.Eq(x => x.EntityId, entityId)
+        var filter = Builders<BsonDocument>.Filter.And(
+            Builders<BsonDocument>.Filter.Eq("EntityType", entityType),
+            Builders<BsonDocument>.Filter.Or(
+                Builders<BsonDocument>.Filter.Eq("EntityId", entityId),
+                int.TryParse(entityId, out var intId)
+                    ? Builders<BsonDocument>.Filter.Eq("EntityId", intId)
+                    : Builders<BsonDocument>.Filter.Exists("___never___")
+            )
         );
 
-        return await _collection
+        var documents = await _collection
             .Find(filter)
-            .SortBy(x => x.OccurredAtUtc)
+            .Sort(Builders<BsonDocument>.Sort.Ascending("OccurredAtUtc"))
             .ToListAsync(ct);
+
+        var result = new List<TimelineEvent>();
+
+        foreach (var doc in documents)
+        {
+            var idValue = doc["EntityId"];
+            string entityIdString = idValue.IsInt32
+                ? idValue.AsInt32.ToString()
+                : idValue.AsString;
+
+            result.Add(new TimelineEvent(
+                doc["EntityType"].AsString,
+                entityIdString,
+                doc["Action"].AsString,
+                doc["Data"].AsString,
+                doc["OccurredAtUtc"].ToUniversalTime()
+            ));
+        }
+
+        return result;
     }
 
     public async Task PingAsync(CancellationToken ct = default)
