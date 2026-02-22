@@ -33,9 +33,7 @@ function TimelinePage() {
                         new Date(b.createdAt) - new Date(a.createdAt)
                 )
             )
-        } catch (err) {
-            console.error(err)
-        } finally {
+        } catch { } finally {
             setLoading(false)
         }
     }
@@ -94,7 +92,7 @@ function TimelinePage() {
 
             default:
                 return (
-                    <pre style={{ background: "#f5f5f5", padding: 8 }}>
+                    <pre className="pre">
                         {JSON.stringify(parsed, null, 2)}
                     </pre>
                 )
@@ -107,9 +105,8 @@ function TimelinePage() {
         <div className="block">
 
             <button
-                className="button"
+                className="button mb-12"
                 onClick={() => navigate(-1)}
-                style={{ marginBottom: 12 }}
             >
                 Back
             </button>
@@ -127,19 +124,13 @@ function TimelinePage() {
                 {events.map((e, index) => (
                     <div
                         key={`${e.createdAt}-${index}`}
-                        className="block"
-                        style={{
-                            padding: 12,
-                            borderRadius: 8,
-                            background: "#fafafa",
-                            border: "1px solid #eee"
-                        }}
+                        className="timeline-item"
                     >
-                        <div style={{ fontWeight: 600 }}>
+                        <div className="timeline-item__title">
                             {e.userName} — {e.eventType} — {formatDate(e.createdAt)}
                         </div>
 
-                        <div style={{ marginTop: 8 }}>
+                        <div className="timeline-item__body">
                             {renderEventDetails(e)}
                         </div>
                     </div>

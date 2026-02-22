@@ -1,8 +1,8 @@
+using System.Data;
 using Dapper;
 using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
 using TaskSystem.Infrastructure.Database;
-using Task = System.Threading.Tasks.Task;
 
 namespace TaskSystem.Infrastructure.Repositories;
 
@@ -33,8 +33,8 @@ public class CommentRepository : ICommentRepository
                                RETURNING id
                            """;
 
-        using var db = _connection.Create();
-
+        using IDbConnection db = _connection.Create();
+        
         return await db.ExecuteScalarAsync<int>(sql, new
         {
             comment.TaskId,
@@ -58,7 +58,7 @@ public class CommentRepository : ICommentRepository
                                ORDER BY created_at ASC
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
 
         return await db.QueryAsync<Comment>(sql, new { TaskId = taskId });
     }

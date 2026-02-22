@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using Npgsql;
 using TaskSystem.Domain.Interfaces;
@@ -20,10 +21,11 @@ public class TaskRepository : ITaskRepository
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            await using var db = (NpgsqlConnection)_connection.Create();
+            await using NpgsqlConnection db = (NpgsqlConnection)_connection.Create();
+            
             await db.OpenAsync();
 
-            await using var tx = await db.BeginTransactionAsync();
+            await using NpgsqlTransaction tx = await db.BeginTransactionAsync();
 
             try
             {
@@ -34,13 +36,12 @@ public class TaskRepository : ITaskRepository
                     FOR UPDATE
                 """;
 
-                var projectExists = await db.ExecuteScalarAsync<int?>(
-                    lockProjectSql,
-                    new { task.ProjectId },
-                    tx);
+                int? projectExists = await db.ExecuteScalarAsync<int?>(lockProjectSql, new { task.ProjectId }, tx);
 
                 if (projectExists is null)
-                    throw new Exception("Project not found");
+                {
+                    throw new Exception("project not found");
+                }
 
                 const string numberSql = """
                     SELECT COALESCE(MAX(number_in_project), 0) + 1
@@ -48,10 +49,8 @@ public class TaskRepository : ITaskRepository
                     WHERE project_id = @ProjectId
                 """;
 
-                var nextNumber = await db.ExecuteScalarAsync<int>(
-                    numberSql,
-                    new { task.ProjectId },
-                    tx);
+                // дума для next number можна і краще було реалізувати та я вирішив шо для наглядності підійде
+                int nextNumber = await db.ExecuteScalarAsync<int>(numberSql, new { task.ProjectId }, tx);
 
                 const string insertSql = """
                     INSERT INTO tasks (
@@ -81,7 +80,7 @@ public class TaskRepository : ITaskRepository
                     RETURNING id
                 """;
 
-                var id = await db.ExecuteScalarAsync<int>(
+                int id = await db.ExecuteScalarAsync<int>(
                     insertSql,
                     new
                     {
@@ -108,7 +107,8 @@ public class TaskRepository : ITaskRepository
             }
         }
 
-        throw new Exception("Could not create task due to concurrency conflict.");
+        // не тестував це доречі бо економив час )
+        throw new Exception("could not create task due to concurrency conflict");
     }
         
     public async Task<TaskSystem.Domain.Entities.Task?> GetByIdAsync(int id)
@@ -131,10 +131,9 @@ public class TaskRepository : ITaskRepository
             WHERE id = @Id
         """;
 
-        using var db = _connection.Create();
-        return await db.QueryFirstOrDefaultAsync<TaskSystem.Domain.Entities.Task>(
-            sql,
-            new { Id = id });
+        using IDbConnection db = _connection.Create();
+        
+        return await db.QueryFirstOrDefaultAsync<TaskSystem.Domain.Entities.Task>(sql, new { Id = id });
     }
 
     public async Task<IEnumerable<TaskSystem.Domain.Entities.Task>> GetByProjectAsync(
@@ -145,38 +144,44 @@ public class TaskRepository : ITaskRepository
         int? assignedUserId,
         string? search)
     {
-        var offset = (page - 1) * size;
+        int offset = (page - 1) * size;
 
-        var sql = """
-            SELECT id,
-                   project_id AS ProjectId,
-                   number_in_project AS NumberInProject,
-                   title,
-                   description,
-                   status,
-                   priority,
-                   author_user_id AS AuthorUserId,
-                   author_user_name AS AuthorUserName,
-                   assigned_user_id AS AssignedUserId,
-                   assigned_user_name AS AssignedUserName,
-                   created_at AS CreatedAt,
-                   updated_at AS UpdatedAt
-            FROM tasks
-            WHERE project_id = @ProjectId
-        """;
+        string sql = """
+                         SELECT id,
+                                project_id AS ProjectId,
+                                number_in_project AS NumberInProject,
+                                title,
+                                description,
+                                status,
+                                priority,
+                                author_user_id AS AuthorUserId,
+                                author_user_name AS AuthorUserName,
+                                assigned_user_id AS AssignedUserId,
+                                assigned_user_name AS AssignedUserName,
+                                created_at AS CreatedAt,
+                                updated_at AS UpdatedAt
+                         FROM tasks
+                         WHERE project_id = @ProjectId
+                     """;
 
         if (status.HasValue)
+        {
             sql += " AND status = @Status";
+        }
 
         if (assignedUserId.HasValue)
+        {
             sql += " AND assigned_user_id = @AssignedUserId";
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
+        {
             sql += " AND title ILIKE @Search";
+        }
 
         sql += " ORDER BY number_in_project DESC LIMIT @Size OFFSET @Offset";
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
 
         return await db.QueryAsync<TaskSystem.Domain.Entities.Task>(
             sql,
@@ -209,7 +214,7 @@ public class TaskRepository : ITaskRepository
                                WHERE id = @Id
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
 
         await db.ExecuteAsync(sql, new
         {

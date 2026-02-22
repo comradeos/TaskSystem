@@ -50,9 +50,7 @@ function TaskDetailsPage() {
             )
 
             setUsers(usersData ?? [])
-        } catch (err) {
-            console.error(err)
-        } finally {
+        } catch { } finally {
             setLoading(false)
         }
     }
@@ -79,8 +77,7 @@ function TaskDetailsPage() {
                 setSaveStatus(null)
             }, 2000)
 
-        } catch (err) {
-            console.error(err)
+        } catch {
             setSaveStatus("error")
         }
     }
@@ -96,9 +93,7 @@ function TaskDetailsPage() {
 
             setNewComment("")
             loadData()
-        } catch (err) {
-            console.error(err)
-        }
+        } catch { }
     }
 
     const formatDate = (dateString) => {
@@ -206,17 +201,17 @@ function TaskDetailsPage() {
                 </button>
 
                 {saveStatus === "saving" && (
-                    <div style={{ marginTop: 8 }}>Saving...</div>
+                    <div className="mt-8">Saving...</div>
                 )}
 
                 {saveStatus === "saved" && (
-                    <div style={{ marginTop: 8, color: "green" }}>
+                    <div className="mt-8 text-success">
                         Saved
                     </div>
                 )}
 
                 {saveStatus === "error" && (
-                    <div style={{ marginTop: 8, color: "red" }}>
+                    <div className="mt-8 text-danger">
                         Error while saving
                     </div>
                 )}

@@ -10,12 +10,9 @@ public abstract class BaseApiController : ControllerBase
     {
         get
         {
-            var user = HttpContext.Items["User"] as User;
+            User? user = HttpContext.Items["User"] as User;
 
-            if (user is null)
-                throw new UnauthorizedAccessException("Session required");
-
-            return user;
+            return user ?? throw new UnauthorizedAccessException("Session required");
         }
     }
 

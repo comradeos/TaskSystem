@@ -25,41 +25,46 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            var traceId = context.TraceIdentifier;
+            string traceId = context.TraceIdentifier;
 
             _logger.LogError(ex, "Unhandled exception. TraceId: {TraceId}", traceId);
 
-            if (ex is PostgresException pgEx && pgEx.SqlState == "23505")
+            if (ex is PostgresException { SqlState: "23505" })
             {
                 context.Response.StatusCode = StatusCodes.Status409Conflict;
 
-                var conflictProblem = new ProblemDetails
+                ProblemDetails conflictProblem = new()
                 {
                     Title = "Conflict",
                     Status = 409,
-                    Detail = "Entity already exists"
+                    Detail = "Entity already exists",
+                    Extensions =
+                    {
+                        ["traceId"] = traceId
+                    }
                 };
 
-                conflictProblem.Extensions["traceId"] = traceId;
-
-                var conflictResponse = ApiResponse.Failure(conflictProblem);
+                ApiResponse conflictResponse = ApiResponse.Failure(conflictProblem);
 
                 await context.Response.WriteAsJsonAsync(conflictResponse);
+                
                 return;
             }
 
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-            var defaultProblem = new ProblemDetails
+            ProblemDetails defaultProblem = new()
             {
                 Title = "Internal Server Error",
                 Status = 500,
-                Detail = "An unexpected error occurred"
+                Detail = "An unexpected error occurred",
+                Extensions =
+                {
+                    ["traceId"] = traceId
+                }
             };
 
-            defaultProblem.Extensions["traceId"] = traceId;
-
-            var defaultResponse = ApiResponse.Failure(defaultProblem);
+            ApiResponse defaultResponse = ApiResponse.Failure(defaultProblem);
 
             await context.Response.WriteAsJsonAsync(defaultResponse);
         }

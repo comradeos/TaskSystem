@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from "react"
+import { STORAGE_SESSION_TOKEN_KEY, STORAGE_USER_KEY } from "../config"
 
 export const AuthContext = createContext(null)
 
@@ -7,7 +8,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
 
     useEffect(() => {
-        const stored = localStorage.getItem("user")
+        const stored = localStorage.getItem(STORAGE_USER_KEY)
 
         if (!stored) return
 
@@ -17,21 +18,18 @@ export function AuthProvider({ children }) {
             if (parsed?.sessionToken) {
                 setUser(parsed)
             } else {
-                localStorage.removeItem("user")
-                localStorage.removeItem("sessionToken")
+                localStorage.removeItem(STORAGE_USER_KEY)
+                localStorage.removeItem(STORAGE_SESSION_TOKEN_KEY)
             }
         } catch {
-            localStorage.removeItem("user")
-            localStorage.removeItem("sessionToken")
+            localStorage.removeItem(STORAGE_USER_KEY)
+            localStorage.removeItem(STORAGE_SESSION_TOKEN_KEY)
         }
     }, [])
 
     const login = (data) => {
 
-        if (!data?.sessionToken) {
-            console.error("Invalid login payload", data)
-            return
-        }
+        if (!data?.sessionToken) return
 
         const userData = {
             sessionToken: data.sessionToken,
@@ -40,15 +38,15 @@ export function AuthProvider({ children }) {
             isAdmin: data.isAdmin
         }
 
-        localStorage.setItem("user", JSON.stringify(userData))
-        localStorage.setItem("sessionToken", data.sessionToken)
+        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userData))
+        localStorage.setItem(STORAGE_SESSION_TOKEN_KEY, data.sessionToken)
 
         setUser(userData)
     }
 
     const logout = () => {
-        localStorage.removeItem("user")
-        localStorage.removeItem("sessionToken")
+        localStorage.removeItem(STORAGE_USER_KEY)
+        localStorage.removeItem(STORAGE_SESSION_TOKEN_KEY)
         setUser(null)
     }
 

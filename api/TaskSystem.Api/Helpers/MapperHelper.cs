@@ -7,6 +7,11 @@ public static class MapperHelper
 {
     public static ProjectDto ToDto(Project? project)
     {
+        if (project == null)
+        {
+            return null!;
+        }
+        
         return new ProjectDto
         {
             Id = project.Id,
@@ -15,7 +20,7 @@ public static class MapperHelper
         };
     }
 
-    public static TaskDto ToDto(TaskSystem.Domain.Entities.Task task)
+    public static TaskDto ToDto(Domain.Entities.Task task)
     {
         return new TaskDto
         {

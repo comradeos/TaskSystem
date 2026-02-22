@@ -51,7 +51,13 @@ make up
 make migrate
 ```
 
-------------------------------------------------------------------------
+### 6. Run tests
+
+``` bash
+make test
+```
+
+---
 
 ## Access
 
@@ -78,4 +84,5 @@ make up         # start services
 make down       # stop services
 make migrate    # run migrations
 make logs       # view logs
+make test       # run tests
 ```

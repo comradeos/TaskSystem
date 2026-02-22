@@ -12,7 +12,8 @@ public class TimelineRepository : ITimelineRepository
 
     public TimelineRepository(MongoConnection connection)
     {
-        var database = connection.GetDatabase();
+        IMongoDatabase database = connection.GetDatabase();
+        
         _collection = database.GetCollection<TimelineEvent>("timeline");
     }
 
@@ -25,7 +26,7 @@ public class TimelineRepository : ITimelineRepository
         string entityType,
         int entityId)
     {
-        var filter = Builders<TimelineEvent>.Filter.And(
+        FilterDefinition<TimelineEvent>? filter = Builders<TimelineEvent>.Filter.And(
             Builders<TimelineEvent>.Filter.Eq(x => x.EntityType, entityType),
             Builders<TimelineEvent>.Filter.Eq(x => x.EntityId, entityId)
         );

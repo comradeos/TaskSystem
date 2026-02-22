@@ -18,9 +18,7 @@ function ProjectsPage() {
         try {
             const data = await projectsApi.getAll()
             setProjects(data)
-        } catch (err) {
-            console.error(err)
-        } finally {
+        } catch { } finally {
             setLoading(false)
         }
     }
@@ -41,32 +39,41 @@ function ProjectsPage() {
 
     return (
         <div className="block">
+
             <h1>Projects</h1>
 
-            <div className="block block--row">
-                <input
-                    className="input"
-                    placeholder="New project name"
-                    value={newName}
-                    onChange={(e) => {
-                        setNewName(e.target.value)
-                        setError(null)
-                    }}
-                />
+            <div className="block mb-20">
 
-                <button
-                    className="button button--primary"
-                    onClick={handleCreate}
-                >
-                    Create
-                </button>
-            </div>
+                <h3>Create Project</h3>
 
-            {error && (
-                <div className="error">
-                    {error}
+                <div className="block block--row">
+
+                    <input
+                        className="input"
+                        placeholder="Project name"
+                        value={newName}
+                        onChange={(e) => {
+                            setNewName(e.target.value)
+                            setError(null)
+                        }}
+                    />
+
+                    <button
+                        className="button button--primary"
+                        onClick={handleCreate}
+                    >
+                        Create
+                    </button>
+
                 </div>
-            )}
+
+                {error && (
+                    <div className="error mt-8">
+                        {error}
+                    </div>
+                )}
+
+            </div>
 
             {loading ? (
                 <div>Loading...</div>

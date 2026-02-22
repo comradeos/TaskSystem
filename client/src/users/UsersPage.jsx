@@ -28,9 +28,7 @@ function UsersPage() {
             setLoading(true)
             const data = await usersApi.getAll()
             setUsers(data ?? [])
-        } catch (err) {
-            console.error(err)
-        } finally {
+        } catch { } finally {
             setLoading(false)
         }
     }
@@ -55,8 +53,7 @@ function UsersPage() {
             })
 
             loadUsers()
-        } catch (err) {
-            console.error(err)
+        } catch {
             setError("Failed to create user")
         } finally {
             setSaving(false)
@@ -71,7 +68,7 @@ function UsersPage() {
             <h1>Users</h1>
 
             {user?.isAdmin && (
-                <div className="block" style={{ marginBottom: 20 }}>
+                <div className="block mb-20">
 
                     <h3>Create User</h3>
 
@@ -105,7 +102,7 @@ function UsersPage() {
                             }
                         />
 
-                        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <label className="checkbox-inline">
                             <input
                                 type="checkbox"
                                 checked={form.isAdmin}
@@ -127,7 +124,7 @@ function UsersPage() {
                     </div>
 
                     {error && (
-                        <div style={{ color: "red", marginTop: 8 }}>
+                        <div className="error mt-8">
                             {error}
                         </div>
                     )}
@@ -138,19 +135,15 @@ function UsersPage() {
             <table className="table">
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th>ID</th>
                         <th>Name</th>
-                        <th>Login</th>
-                        <th>Admin</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {users.map((u, index) => (
+                    {users.map((u) => (
                         <tr key={u.id}>
-                            <td>{index + 1}</td>
+                            <td>{u.id}</td>
                             <td>{u.name}</td>
-                            <td>{u.login}</td>
-                            <td>{u.isAdmin ? "Yes" : "No"}</td>
                         </tr>
                     ))}
                 </tbody>

@@ -9,13 +9,11 @@ public class MongoConnection
 
     public MongoConnection(IConfiguration configuration)
     {
-        var connectionString =
-            configuration.GetConnectionString("MongoTimeline");
+        string? connectionString = configuration.GetConnectionString("MongoTimeline");
 
-        var databaseName =
-            configuration["MONGO_TIMELINE_DATABASE"];
+        string? databaseName = configuration["MONGO_TIMELINE_DATABASE"];
 
-        var client = new MongoClient(connectionString);
+        MongoClient client = new MongoClient(connectionString);
 
         _database = client.GetDatabase(databaseName);
     }

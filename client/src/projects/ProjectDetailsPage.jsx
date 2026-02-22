@@ -4,6 +4,7 @@ import { tasksApi } from "../api/tasks.api"
 import { usersApi } from "../api/users.api"
 import { projectsApi } from "../api/projects.api"
 import AddTaskModal from "../tasks/AddTaskModal"
+import { API_BASE } from "../config"
 
 function ProjectDetailsPage() {
     const { id } = useParams()
@@ -34,18 +35,14 @@ function ProjectDetailsPage() {
         try {
             const data = await projectsApi.getById(id)
             setProject(data)
-        } catch (err) {
-            console.error(err)
-        }
+        } catch { }
     }
 
     const loadUsers = async () => {
         try {
             const data = await usersApi.getAll()
             setUsers(data)
-        } catch (err) {
-            console.error(err)
-        }
+        } catch { }
     }
 
     const loadTasks = async () => {
@@ -61,9 +58,7 @@ function ProjectDetailsPage() {
             })
 
             setTasks(data.items ?? data)
-        } catch (err) {
-            console.error(err)
-        } finally {
+        } catch { } finally {
             setLoading(false)
         }
     }
@@ -79,14 +74,13 @@ function ProjectDetailsPage() {
         }).toString()
 
         window.open(
-            `http://localhost:5001/api/tasks/${id}?${params}`,
+            `${API_BASE}/api/tasks/${id}?${params}`,
             "_blank"
         )
     }
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString()
-    }
+    const formatDate = (dateString) =>
+        new Date(dateString).toLocaleString()
 
     const getStatusName = (status) => {
         switch (status) {
@@ -106,13 +100,14 @@ function ProjectDetailsPage() {
         }
     }
 
+    const isNextDisabled = tasks.length < size
+
     return (
         <div className="block">
 
             <button
-                className="button"
+                className="button mb-12"
                 onClick={() => navigate("/projects")}
-                style={{ marginBottom: 12 }}
             >
                 All projects
             </button>
@@ -230,6 +225,7 @@ function ProjectDetailsPage() {
 
                         <button
                             className="button"
+                            disabled={isNextDisabled}
                             onClick={() => setPage(p => p + 1)}
                         >
                             Next

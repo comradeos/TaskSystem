@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { useAuth } from "../auth/useAuth"
 import ProtectedRoute from "../components/ProtectedRoute"
-
 import LoginPage from "../auth/LoginPage"
 import ProjectsPage from "../projects/ProjectsPage"
 import ProjectDetailsPage from "../projects/ProjectDetailsPage"
@@ -91,7 +90,6 @@ function App() {
         }
       />
 
-      {/* ВАЖНО: fallback зависит от авторизации */}
       <Route
         path="*"
         element={

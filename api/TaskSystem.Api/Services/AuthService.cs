@@ -19,27 +19,27 @@ public class AuthService
 
     public async Task<LoginResult?> LoginAsync(string login, string password)
     {
-        var user = await _userRepository.GetByLoginAsync(login);
+        User? user = await _userRepository.GetByLoginAsync(login);
 
         if (user is null)
+        {
             return null;
+        }
 
         if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
             return null;
+        }
 
-        var token = Guid.NewGuid().ToString();
+        string token = Guid.NewGuid().ToString();
+        
+        Session session = new(0, user.Id, token, DateTime.UtcNow);
 
-        await _sessionRepository.CreateAsync(new Session(
-            0,
-            user.Id,
-            token,
-            DateTime.UtcNow));
+        await _sessionRepository.CreateAsync(session);
+        
+        LoginResult result = new(token, user.Id, user.Name, user.IsAdmin);
 
-        return new LoginResult(
-            token,
-            user.Id,
-            user.Name,
-            user.IsAdmin);
+        return result;
     }
 
     public async Task LogoutAsync(string token)

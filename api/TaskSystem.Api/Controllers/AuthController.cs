@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Services;
@@ -26,12 +27,14 @@ public class AuthController : BaseApiController
             return BadRequestResponse("Login and password are required");
         }
 
-        var result = await _authService.LoginAsync(request.Login, request.Password);
+        LoginResult? result = await _authService.LoginAsync(request.Login, request.Password);
 
         if (result is null)
+        {
             return UnauthorizedResponse("Invalid login or password");
+        }
 
-        var response = new LoginResponseDto
+        LoginResponseDto response = new()
         {
             SessionToken = result.SessionToken,
             Id = result.Id,
@@ -45,8 +48,10 @@ public class AuthController : BaseApiController
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        if (!Request.Headers.TryGetValue("X-Session-Token", out var token))
+        if (!Request.Headers.TryGetValue("X-Session-Token", out StringValues token))
+        {
             return UnauthorizedResponse("Session token required");
+        }
 
         await _authService.LogoutAsync(token!);
 

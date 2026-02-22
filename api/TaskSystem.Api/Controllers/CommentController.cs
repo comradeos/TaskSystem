@@ -6,6 +6,7 @@ using TaskSystem.Api.Services;
 using TaskSystem.Domain.Common;
 using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
+using Task = TaskSystem.Domain.Entities.Task;
 
 namespace TaskSystem.Api.Controllers;
 
@@ -30,52 +31,56 @@ public class CommentController : BaseApiController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCommentRequestDto request)
     {
-        var user = CurrentUser;
+        User user = CurrentUser;
 
         if (!RequestValidator.NotEmpty(request.Content))
+        {
             return BadRequestResponse("Content is required");
+        }
 
-        var task = await _taskRepository.GetByIdAsync(request.TaskId);
+        Task? task = await _taskRepository.GetByIdAsync(request.TaskId);
 
         if (!RequestValidator.NotNull(task))
+        {
             return BadRequestResponse("Task does not exist");
+        }
 
-        var comment = new Comment(
+        Comment comment = new(
             0,
             request.TaskId,
             user.Id,
             user.Name,
             request.Content,
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
-        var id = await _commentRepository.CreateAsync(comment);
+        int id = await _commentRepository.CreateAsync(comment);
 
         await _timelineService.CommentAdded(
             request.TaskId,
             user.Id,
             user.Name,
-            new
-            {
-                request.Content
-            });
+            new { request.Content }
+        );
+        
+        CreateCommentResponseDto dto = new() { Id = id };
 
-        return Ok(ApiResponse.Success(new CreateCommentResponseDto
-        {
-            Id = id
-        }));
+        return Ok(ApiResponse.Success(dto));
     }
 
     [HttpGet("{taskId:int}")]
     public async Task<IActionResult> GetByTask(int taskId)
     {
-        var task = await _taskRepository.GetByIdAsync(taskId);
+        Task? task = await _taskRepository.GetByIdAsync(taskId);
 
         if (!RequestValidator.NotNull(task))
+        {
             return BadRequestResponse("Task does not exist");
+        }
 
-        var comments = await _commentRepository.GetByTaskAsync(taskId);
+        IEnumerable<Comment> comments = await _commentRepository.GetByTaskAsync(taskId);
 
-        var result = comments.Select(MapperHelper.ToDto);
+        IEnumerable<CommentDto> result = comments.Select(MapperHelper.ToDto);
 
         return Ok(ApiResponse.Success(result));
     }

@@ -23,9 +23,7 @@ function LoginPage() {
 
         try {
             const data = await authApi.login(loginValue, password)
-
             login(data)
-
             navigate("/projects", { replace: true })
         } catch (err) {
             setError(err.message || "Invalid login or password")

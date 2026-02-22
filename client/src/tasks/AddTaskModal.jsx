@@ -21,9 +21,7 @@ function AddTaskModal({ projectId, onClose, onCreated }) {
         try {
             const data = await usersApi.getAll()
             setUsers(data)
-        } catch (err) {
-            console.error(err)
-        }
+        } catch { }
     }
 
     const handleSubmit = async (e) => {

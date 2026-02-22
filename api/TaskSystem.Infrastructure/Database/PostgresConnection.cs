@@ -11,7 +11,7 @@ public class PostgresConnection
     public PostgresConnection(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("PostgresCore")
-                            ?? throw new InvalidOperationException("Postgres connection string not configured");
+            ?? throw new InvalidOperationException("Postgres connection string not configured");
     }
 
     public IDbConnection Create()

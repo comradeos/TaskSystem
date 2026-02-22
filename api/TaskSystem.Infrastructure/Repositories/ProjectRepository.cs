@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
@@ -22,7 +23,8 @@ public class ProjectRepository : IProjectRepository
                                RETURNING id
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         return await db.ExecuteScalarAsync<int>(sql, project);
     }
 
@@ -36,7 +38,8 @@ public class ProjectRepository : IProjectRepository
                                WHERE id = @Id
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         return await db.QueryFirstOrDefaultAsync<Project>(sql, new { Id = id });
     }
 
@@ -50,7 +53,8 @@ public class ProjectRepository : IProjectRepository
                                ORDER BY created_at DESC
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         return await db.QueryAsync<Project>(sql);
     }
 }

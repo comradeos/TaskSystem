@@ -6,7 +6,7 @@ using TaskSystem.Infrastructure.Repositories;
 using TaskSystem.Api.Services;
 using TaskSystem.Api.Middleware;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, cfg) =>
 {
@@ -25,8 +25,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ClientCorsPolicy", policy =>
     {
-        policy
-            .WithOrigins(
+        policy.WithOrigins(
+                // залишив обидва порти для зручності шоб фронт не тестувати в докері
                 "http://localhost:5173",
                 "http://localhost:3001"
             )

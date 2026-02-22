@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
@@ -27,7 +28,7 @@ public class UserRepository : IUserRepository
             WHERE login = @Login
         """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
         return await db.QueryFirstOrDefaultAsync<User>(sql, new { Login = login });
     }
 
@@ -44,7 +45,7 @@ public class UserRepository : IUserRepository
             WHERE id = @Id
         """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
         return await db.QueryFirstOrDefaultAsync<User>(sql, new { Id = id });
     }
 
@@ -61,7 +62,7 @@ public class UserRepository : IUserRepository
             ORDER BY id ASC
         """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
         return await db.QueryAsync<User>(sql);
     }
 
@@ -73,7 +74,7 @@ public class UserRepository : IUserRepository
             RETURNING id
         """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
 
         return await db.ExecuteScalarAsync<int>(sql, new
         {

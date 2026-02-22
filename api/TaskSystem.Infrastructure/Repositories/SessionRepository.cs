@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
@@ -22,7 +23,8 @@ public class SessionRepository : ISessionRepository
                                VALUES (@UserId, @SessionToken, @CreatedAt)
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         await db.ExecuteAsync(sql, session);
     }
 
@@ -37,7 +39,8 @@ public class SessionRepository : ISessionRepository
                                WHERE session_token = @Token
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         return await db.QueryFirstOrDefaultAsync<Session>(sql, new { Token = token });
     }
 
@@ -48,7 +51,8 @@ public class SessionRepository : ISessionRepository
                                WHERE session_token = @Token
                            """;
 
-        using var db = _connection.Create();
+        using IDbConnection db = _connection.Create();
+        
         await db.ExecuteAsync(sql, new { Token = token });
     }
 }

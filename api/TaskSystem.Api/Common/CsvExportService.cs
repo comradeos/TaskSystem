@@ -1,21 +1,22 @@
 using System.Text;
+using Task = TaskSystem.Domain.Entities.Task;
 
 namespace TaskSystem.Api.Common;
 
 public interface ICsvExportService
 {
-    byte[] ExportTasks(IEnumerable<TaskSystem.Domain.Entities.Task> tasks);
+    byte[] ExportTasks(IEnumerable<Task> tasks);
 }
 
 public class CsvExportService : ICsvExportService
 {
-    public byte[] ExportTasks(IEnumerable<TaskSystem.Domain.Entities.Task> tasks)
+    public byte[] ExportTasks(IEnumerable<Task> tasks)
     {
-        var sb = new StringBuilder();
+        StringBuilder sb = new();
 
         sb.AppendLine("Id,Number,Title,Status,Priority,Author,AssignedTo,CreatedAt");
 
-        foreach (var t in tasks)
+        foreach (Task t in tasks)
         {
             sb.AppendLine(string.Join(",",
                 t.Id,
@@ -34,10 +35,14 @@ public class CsvExportService : ICsvExportService
     private static string Escape(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return "";
+        }
 
-        if (value.Contains(",") || value.Contains("\""))
+        if (value.Contains(',') || value.Contains('"'))
+        {
             return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
 
         return value;
     }

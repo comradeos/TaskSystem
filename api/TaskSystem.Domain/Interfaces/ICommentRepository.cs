@@ -1,5 +1,4 @@
 using TaskSystem.Domain.Entities;
-using Task = System.Threading.Tasks.Task;
 
 namespace TaskSystem.Domain.Interfaces;
 

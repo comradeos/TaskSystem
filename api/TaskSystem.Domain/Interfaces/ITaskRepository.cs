@@ -1,4 +1,3 @@
-using TaskSystem.Domain.Entities;
 using Task = System.Threading.Tasks.Task;
 
 namespace TaskSystem.Domain.Interfaces;
@@ -15,12 +14,14 @@ public interface ITaskRepository
         int size,
         int? status,
         int? assignedUserId,
-        string? search);
+        string? search
+    );
     
     Task UpdateAsync(
         int id,
         int? status,
         int? priority,
         int? assignedUserId,
-        string? assignedUserName);
+        string? assignedUserName
+    );
 }

@@ -30,9 +30,9 @@ public class ProjectController : BaseApiController
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var projects = await _projectRepository.GetAllAsync();
+        IEnumerable<Project> projects = await _projectRepository.GetAllAsync();
 
-        var result = projects.Select(MapperHelper.ToDto);
+        IEnumerable<ProjectDto> result = projects.Select(MapperHelper.ToDto);
 
         return Ok(ApiResponse.Success(result));
     }
@@ -40,12 +40,14 @@ public class ProjectController : BaseApiController
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
+        Project? project = await _projectRepository.GetByIdAsync(id);
 
         if (!RequestValidator.NotNull(project))
-            return NotFoundResponse("Project not found");
+        {
+            return NotFoundResponse("project not found");
+        }
 
-        var dto = MapperHelper.ToDto(project);
+        ProjectDto dto = MapperHelper.ToDto(project);
 
         return Ok(ApiResponse.Success(dto));
     }
@@ -53,15 +55,16 @@ public class ProjectController : BaseApiController
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
+        Project? project = await _projectRepository.GetByIdAsync(id);
 
         if (!RequestValidator.NotNull(project))
-            return NotFoundResponse("Project not found");
+        {
+            return NotFoundResponse("project not found");
+        }
 
-        var events = await _timelineRepository
-            .GetByEntityAsync("Project", id);
+        IEnumerable<TimelineEvent> events = await _timelineRepository.GetByEntityAsync("Project", id);
 
-        var result = events.Select(MapperHelper.ToDto);
+        IEnumerable<TimelineEventDto> result = events.Select(MapperHelper.ToDto);
 
         return Ok(ApiResponse.Success(result));
     }
@@ -69,30 +72,21 @@ public class ProjectController : BaseApiController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequestDto request)
     {
-        var user = CurrentUser;
+        User user = CurrentUser;
 
         if (!RequestValidator.NotEmpty(request.Name))
-            return BadRequestResponse("Project name is required");
-
-        var project = new Project(
-            0,
-            request.Name,
-            DateTime.UtcNow);
-
-        var id = await _projectRepository.CreateAsync(project);
-
-        await _timelineService.ProjectCreated(
-            id,
-            user.Id,
-            user.Name,
-            new
-            {
-                request.Name
-            });
-
-        return Ok(ApiResponse.Success(new CreateProjectResponseDto
         {
-            Id = id
-        }));
+            return BadRequestResponse("project name is required");
+        }
+
+        Project project = new(0, request.Name, DateTime.UtcNow);
+
+        int id = await _projectRepository.CreateAsync(project);
+
+        await _timelineService.ProjectCreated(id, user.Id, user.Name, new { request.Name });
+
+        CreateProjectResponseDto dto = new() { Id = id };
+        
+        return Ok(ApiResponse.Success(dto));
     }
 }

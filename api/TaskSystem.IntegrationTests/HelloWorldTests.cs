@@ -1,11 +1,11 @@
 namespace TaskSystem.IntegrationTests;
 
-public class SanityTests
+public class HelloWorldTests
 {
     [Fact]
     public void TwoPlusTwo_EqualsFour()
     {
-        var result = 2 + 2;
+        const int result = 2 + 2; // потужний тест для перевірки
 
         Assert.Equal(4, result);
     }

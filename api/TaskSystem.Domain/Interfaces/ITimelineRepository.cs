@@ -9,5 +9,6 @@ public interface ITimelineRepository
 
     Task<IEnumerable<TimelineEvent>> GetByEntityAsync(
         string entityType,
-        int entityId);
+        int entityId
+    );
 }

@@ -4,6 +4,7 @@ using TaskSystem.Domain.Entities;
 
 namespace TaskSystem.Api.Controllers;
 
+// тестовй контролер для перевірки 
 [ApiController]
 [Route("api/test")]
 public class TestController : ControllerBase
@@ -11,7 +12,7 @@ public class TestController : ControllerBase
     [HttpGet("me")]
     public IActionResult Me()
     {
-        var user = HttpContext.Items["User"] as User;
+        User? user = HttpContext.Items["User"] as User;
 
         if (user is null)
         {
@@ -19,7 +20,7 @@ public class TestController : ControllerBase
             {
                 Title = "Unauthorized",
                 Status = 401,
-                Detail = "Session required"
+                Detail = "session required"
             }));
         }
 
@@ -34,15 +35,15 @@ public class TestController : ControllerBase
     [HttpGet("admin-only")]
     public IActionResult AdminOnly()
     {
-        var user = HttpContext.Items["User"] as User;
+        User? user = HttpContext.Items["User"] as User;
 
         if (user is null)
         {
             return Unauthorized(ApiResponse.Failure(new ProblemDetails
             {
-                Title = "Unauthorized",
+                Title = "unauthorized",
                 Status = 401,
-                Detail = "Session required"
+                Detail = "session required"
             }));
         }
 
@@ -50,12 +51,12 @@ public class TestController : ControllerBase
         {
             return StatusCode(403, ApiResponse.Failure(new ProblemDetails
             {
-                Title = "Forbidden",
+                Title = "forbidden",
                 Status = 403,
-                Detail = "Admin access required"
+                Detail = "admin access required"
             }));
         }
 
-        return Ok(ApiResponse.Success("Admin endpoint reached"));
+        return Ok(ApiResponse.Success("admin endpoint reached"));
     }
 }

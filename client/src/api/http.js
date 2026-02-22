@@ -1,7 +1,7 @@
-const API_BASE = "http://localhost:5001"
+import { API_BASE, STORAGE_SESSION_TOKEN_KEY } from "../config"
 
 function getToken() {
-    return localStorage.getItem("sessionToken")
+    return localStorage.getItem(STORAGE_SESSION_TOKEN_KEY)
 }
 
 function getErrorMessage(result, fallback) {
@@ -38,21 +38,15 @@ async function request(url, options = {}) {
     }
 
     if (response.status === 401) {
-        throw new Error(
-            getErrorMessage(result, "Unauthorized")
-        )
+        throw new Error(getErrorMessage(result, "Unauthorized"))
     }
 
     if (!response.ok) {
-        throw new Error(
-            getErrorMessage(result, "Request failed")
-        )
+        throw new Error(getErrorMessage(result, "Request failed"))
     }
 
     if (result?.result === false) {
-        throw new Error(
-            getErrorMessage(result, "Operation failed")
-        )
+        throw new Error(getErrorMessage(result, "Operation failed"))
     }
 
     return result.data

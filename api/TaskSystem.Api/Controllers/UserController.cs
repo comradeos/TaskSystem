@@ -30,9 +30,9 @@ public class UserController : BaseApiController
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var users = await _userRepository.GetAllAsync();
+        IEnumerable<User> users = await _userRepository.GetAllAsync();
 
-        var result = users.Select(MapperHelper.ToDto);
+        IEnumerable<UserDto> result = users.Select(MapperHelper.ToDto);
 
         return Ok(ApiResponse.Success(result));
     }
@@ -40,15 +40,16 @@ public class UserController : BaseApiController
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
     {
-        var user = await _userRepository.GetByIdAsync(id);
+        User? user = await _userRepository.GetByIdAsync(id);
 
         if (!RequestValidator.NotNull(user))
-            return NotFoundResponse("User not found");
+        {
+            return NotFoundResponse("user not found");
+        }
 
-        var events = await _timelineRepository
-            .GetByEntityAsync("User", id);
+        IEnumerable<TimelineEvent> events = await _timelineRepository.GetByEntityAsync("User", id);
 
-        var result = events.Select(MapperHelper.ToDto);
+        IEnumerable<TimelineEventDto> result = events.Select(MapperHelper.ToDto);
 
         return Ok(ApiResponse.Success(result));
     }
@@ -56,29 +57,33 @@ public class UserController : BaseApiController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequestDto request)
     {
-        var currentUser = CurrentUser;
+        User currentUser = CurrentUser;
 
         if (!currentUser.IsAdmin)
-            return ForbiddenResponse("Admin only");
+        {
+            return ForbiddenResponse("admin only");
+        }
 
+        // можна було б зробити окрему валідацію для кожного поля
         if (!RequestValidator.NotEmpty(request.Name) ||
             !RequestValidator.NotEmpty(request.Login) ||
             !RequestValidator.NotEmpty(request.Password))
         {
-            return BadRequestResponse("Name, login and password are required");
+            return BadRequestResponse("name login password are required");
         }
 
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        string? passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        var user = new User(
+        User user = new User(
             0,
             request.Name,
             request.Login,
             passwordHash,
             request.IsAdmin,
-            DateTime.UtcNow);
+            DateTime.UtcNow
+        );
 
-        var id = await _userRepository.CreateAsync(user);
+        int id = await _userRepository.CreateAsync(user);
 
         await _timelineService.UserCreated(
             id,
@@ -90,10 +95,9 @@ public class UserController : BaseApiController
                 request.Login,
                 request.IsAdmin
             });
+        
+        CreateUserResponseDto dto = new() { Id = id };
 
-        return Ok(ApiResponse.Success(new CreateUserResponseDto
-        {
-            Id = id
-        }));
+        return Ok(ApiResponse.Success(dto));
     }
 }

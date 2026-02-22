@@ -1,4 +1,7 @@
+using Microsoft.Extensions.Primitives;
+using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Interfaces;
+using Task = System.Threading.Tasks.Task;
 
 namespace TaskSystem.Api.Middleware;
 
@@ -16,17 +19,19 @@ public class SessionMiddleware
         ISessionRepository sessionRepository,
         IUserRepository userRepository)
     {
-        if (!context.Request.Headers.TryGetValue("X-Session-Token", out var token))
+        if (!context.Request.Headers.TryGetValue("X-Session-Token", out StringValues token))
         {
             await _next(context);
+            
             return;
         }
 
-        var session = await sessionRepository.GetByTokenAsync(token!);
+        Session? session = await sessionRepository.GetByTokenAsync(token!);
 
         if (session is null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            
             await context.Response.WriteAsJsonAsync(new
             {
                 result = false,
@@ -41,11 +46,12 @@ public class SessionMiddleware
             return;
         }
 
-        var user = await userRepository.GetByIdAsync(session.UserId);
+        User? user = await userRepository.GetByIdAsync(session.UserId);
 
         if (user is null)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            
             return;
         }
 
