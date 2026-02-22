@@ -1,49 +1,49 @@
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Helpers;
 using TaskSystem.Api.Services;
 using TaskSystem.Domain.Common;
-using TaskSystem.Domain.Entities;
 using TaskSystem.Domain.Enums;
 using TaskSystem.Domain.Interfaces;
+using Task = TaskSystem.Domain.Entities.Task;
 using TaskStatus = TaskSystem.Domain.Enums.TaskStatus;
 
 namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/tasks")]
-public class TaskController : ControllerBase
+public class TaskController : BaseApiController
 {
     private readonly ITaskRepository _taskRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IUserRepository _userRepository;
     private readonly TimelineService _timelineService;
     private readonly ITimelineRepository _timelineRepository;
+    private readonly ICsvExportService _csvExportService;
 
     public TaskController(
         ITaskRepository taskRepository,
         IProjectRepository projectRepository,
         IUserRepository userRepository,
         TimelineService timelineService,
-        ITimelineRepository timelineRepository)
+        ITimelineRepository timelineRepository,
+        ICsvExportService csvExportService)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
         _userRepository = userRepository;
         _timelineService = timelineService;
         _timelineRepository = timelineRepository;
+        _csvExportService = csvExportService;
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTaskRequestDto request)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = CurrentUser;
 
-        if (user is null)
-            return UnauthorizedResponse();
-
-        if (string.IsNullOrWhiteSpace(request.Title))
+        if (!RequestValidator.NotEmpty(request.Title))
             return BadRequestResponse("Title is required");
 
         if (!Enum.IsDefined(typeof(TaskStatus), request.Status))
@@ -54,7 +54,7 @@ public class TaskController : ControllerBase
 
         var project = await _projectRepository.GetByIdAsync(request.ProjectId);
 
-        if (project is null)
+        if (!RequestValidator.NotNull(project))
             return BadRequestResponse("Project does not exist");
 
         string? assignedUserName = null;
@@ -64,13 +64,13 @@ public class TaskController : ControllerBase
             var assignedUser =
                 await _userRepository.GetByIdAsync(request.AssignedUserId.Value);
 
-            if (assignedUser is null)
+            if (!RequestValidator.NotNull(assignedUser))
                 return BadRequestResponse("Assigned user does not exist");
 
-            assignedUserName = assignedUser.Name;
+            assignedUserName = assignedUser?.Name;
         }
 
-        var task = new TaskSystem.Domain.Entities.Task(
+        var task = new Task(
             0,
             request.ProjectId,
             0,
@@ -115,11 +115,6 @@ public class TaskController : ControllerBase
         string? search = null,
         bool export = false)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-            return UnauthorizedResponse();
-
         if (!export && (page < 1 || size < 1 || size > 100))
             return BadRequestResponse("Invalid page or size");
 
@@ -137,8 +132,7 @@ public class TaskController : ControllerBase
 
         if (export)
         {
-            var csv = GenerateCsv(tasks);
-            var bytes = Encoding.UTF8.GetBytes(csv);
+            var bytes = _csvExportService.ExportTasks(tasks);
 
             return File(
                 bytes,
@@ -156,14 +150,11 @@ public class TaskController : ControllerBase
         int id,
         [FromBody] UpdateTaskRequestDto request)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-            return UnauthorizedResponse();
+        var user = CurrentUser;
 
         var task = await _taskRepository.GetByIdAsync(id);
 
-        if (task is null)
+        if (!RequestValidator.NotNull(task))
             return NotFoundResponse("Task not found");
 
         if (request.Status.HasValue &&
@@ -181,10 +172,10 @@ public class TaskController : ControllerBase
             var assignedUser =
                 await _userRepository.GetByIdAsync(request.AssignedUserId.Value);
 
-            if (assignedUser is null)
+            if (!RequestValidator.NotNull(assignedUser))
                 return BadRequestResponse("Assigned user does not exist");
 
-            assignedUserName = assignedUser.Name;
+            assignedUserName = assignedUser?.Name;
         }
 
         await _taskRepository.UpdateAsync(
@@ -214,14 +205,9 @@ public class TaskController : ControllerBase
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-            return UnauthorizedResponse();
-
         var task = await _taskRepository.GetByIdAsync(id);
 
-        if (task is null)
+        if (!RequestValidator.NotNull(task))
             return NotFoundResponse("Task not found");
 
         var events = await _timelineRepository
@@ -231,61 +217,17 @@ public class TaskController : ControllerBase
 
         return Ok(ApiResponse.Success(result));
     }
-
-    private IActionResult UnauthorizedResponse() =>
-        Unauthorized(ApiResponse.Failure(new ProblemDetails
-        {
-            Title = "Unauthorized",
-            Status = 401,
-            Detail = "Session required"
-        }));
-
-    private IActionResult BadRequestResponse(string message) =>
-        BadRequest(ApiResponse.Failure(new ProblemDetails
-        {
-            Title = "Invalid request",
-            Status = 400,
-            Detail = message
-        }));
-
-    private IActionResult NotFoundResponse(string message) =>
-        NotFound(ApiResponse.Failure(new ProblemDetails
-        {
-            Title = "Not Found",
-            Status = 404,
-            Detail = message
-        }));
-
-    private string GenerateCsv(IEnumerable<TaskSystem.Domain.Entities.Task> tasks)
+    
+    [HttpGet("by-id/{id:int}")]
+    public async Task<IActionResult> GetById(int id)
     {
-        var sb = new StringBuilder();
+        var task = await _taskRepository.GetByIdAsync(id);
 
-        sb.AppendLine("Id,Number,Title,Status,Priority,Author,AssignedTo,CreatedAt");
+        if (!RequestValidator.NotNull(task))
+            return NotFoundResponse("Task not found");
 
-        foreach (var t in tasks)
-        {
-            sb.AppendLine(string.Join(",",
-                t.Id,
-                t.NumberInProject,
-                Escape(t.Title),
-                t.Status,
-                t.Priority,
-                Escape(t.AuthorUserName),
-                Escape(t.AssignedUserName),
-                t.CreatedAt));
-        }
+        var result = MapperHelper.ToDto(task!);
 
-        return sb.ToString();
-    }
-
-    private string Escape(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        if (value.Contains(",") || value.Contains("\""))
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-
-        return value;
+        return Ok(ApiResponse.Success(result));
     }
 }

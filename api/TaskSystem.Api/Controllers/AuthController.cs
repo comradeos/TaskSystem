@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Services;
 using TaskSystem.Domain.Common;
@@ -7,7 +8,7 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : BaseApiController
 {
     private readonly AuthService _authService;
 
@@ -19,32 +20,23 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
-        if (string.IsNullOrWhiteSpace(request.Login) ||
-            string.IsNullOrWhiteSpace(request.Password))
+        if (!RequestValidator.NotEmpty(request.Login) ||
+            !RequestValidator.NotEmpty(request.Password))
         {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid request",
-                Detail = "Login and password are required",
-                Status = StatusCodes.Status400BadRequest
-            }));
+            return BadRequestResponse("Login and password are required");
         }
 
-        var token = await _authService.LoginAsync(request.Login, request.Password);
+        var result = await _authService.LoginAsync(request.Login, request.Password);
 
-        if (token is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Detail = "Invalid login or password",
-                Status = StatusCodes.Status401Unauthorized
-            }));
-        }
+        if (result is null)
+            return UnauthorizedResponse("Invalid login or password");
 
         var response = new LoginResponseDto
         {
-            SessionToken = token
+            SessionToken = result.SessionToken,
+            Id = result.Id,
+            Name = result.Name,
+            IsAdmin = result.IsAdmin
         };
 
         return Ok(ApiResponse.Success(response));
@@ -54,14 +46,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout()
     {
         if (!Request.Headers.TryGetValue("X-Session-Token", out var token))
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session token required"
-            }));
-        }
+            return UnauthorizedResponse("Session token required");
 
         await _authService.LogoutAsync(token!);
 

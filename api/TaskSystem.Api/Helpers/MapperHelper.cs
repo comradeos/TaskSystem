@@ -5,7 +5,7 @@ namespace TaskSystem.Api.Helpers;
 
 public static class MapperHelper
 {
-    public static ProjectDto ToDto(Project project)
+    public static ProjectDto ToDto(Project? project)
     {
         return new ProjectDto
         {

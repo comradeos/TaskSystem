@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Helpers;
 using TaskSystem.Api.Services;
@@ -10,7 +11,7 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/users")]
-public class UserController : ControllerBase
+public class UserController : BaseApiController
 {
     private readonly IUserRepository _userRepository;
     private readonly TimelineService _timelineService;
@@ -29,18 +30,6 @@ public class UserController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var currentUser = HttpContext.Items["User"] as User;
-
-        if (currentUser is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var users = await _userRepository.GetAllAsync();
 
         var result = users.Select(MapperHelper.ToDto);
@@ -51,29 +40,10 @@ public class UserController : ControllerBase
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
     {
-        var currentUser = HttpContext.Items["User"] as User;
-
-        if (currentUser is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var user = await _userRepository.GetByIdAsync(id);
 
-        if (user is null)
-        {
-            return NotFound(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Not Found",
-                Status = 404,
-                Detail = "User not found"
-            }));
-        }
+        if (!RequestValidator.NotNull(user))
+            return NotFoundResponse("User not found");
 
         var events = await _timelineRepository
             .GetByEntityAsync("User", id);
@@ -86,39 +56,16 @@ public class UserController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequestDto request)
     {
-        var currentUser = HttpContext.Items["User"] as User;
-
-        if (currentUser is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
+        var currentUser = CurrentUser;
 
         if (!currentUser.IsAdmin)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden,
-                ApiResponse.Failure(new ProblemDetails
-                {
-                    Title = "Forbidden",
-                    Status = 403,
-                    Detail = "Admin only"
-                }));
-        }
+            return ForbiddenResponse("Admin only");
 
-        if (string.IsNullOrWhiteSpace(request.Name) ||
-            string.IsNullOrWhiteSpace(request.Login) ||
-            string.IsNullOrWhiteSpace(request.Password))
+        if (!RequestValidator.NotEmpty(request.Name) ||
+            !RequestValidator.NotEmpty(request.Login) ||
+            !RequestValidator.NotEmpty(request.Password))
         {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid request",
-                Status = 400,
-                Detail = "Name, login and password are required"
-            }));
+            return BadRequestResponse("Name, login and password are required");
         }
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);

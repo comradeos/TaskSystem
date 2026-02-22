@@ -1,3 +1,8 @@
+x-core-env: &core-env
+  ConnectionStrings__PostgresCore: ${POSTGRES_CONNECTION}
+  ConnectionStrings__MongoTimeline: ${MONGO_CONNECTION}
+  MONGO_TIMELINE_DATABASE: ${MONGO_TIMELINE_DATABASE}
+
 services:
 
   core-data:
@@ -30,9 +35,7 @@ services:
     container_name: tasksystem-api
     restart: unless-stopped
     environment:
-      ConnectionStrings__PostgresCore: Host=core-data;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable
-      ConnectionStrings__MongoTimeline: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@timeline-data:27017/?authSource=admin
-      MONGO_TIMELINE_DATABASE: ${MONGO_TIMELINE_DATABASE}
+      <<: *core-env
       CORE_DATA_USER: ${CORE_DATA_USER}
       CORE_DATA_PASSWORD: ${CORE_DATA_PASSWORD}
     depends_on:
@@ -54,13 +57,30 @@ services:
     build: ./migrator
     container_name: tasksystem-migrator
     environment:
-      ConnectionStrings__PostgresCore: Host=core-data;Port=5432;Database=${POSTGRES_CORE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};SSL Mode=Disable
+      ConnectionStrings__PostgresCore: ${POSTGRES_CONNECTION}
       CORE_DATA_USER: ${CORE_DATA_USER}
       CORE_DATA_PASSWORD: ${CORE_DATA_PASSWORD}
     depends_on:
       - core-data
     profiles:
       - migrate
+
+  tests:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    container_name: tasksystem-tests
+    command: >
+      dotnet test
+      --no-build
+      --verbosity normal
+    environment:
+      <<: *core-env
+    depends_on:
+      - core-data
+      - timeline-data
+    profiles:
+      - test
 
 volumes:
   core_data:

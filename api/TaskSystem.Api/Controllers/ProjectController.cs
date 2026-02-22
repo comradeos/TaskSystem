@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Helpers;
 using TaskSystem.Api.Services;
@@ -10,7 +11,7 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/projects")]
-public class ProjectController : ControllerBase
+public class ProjectController : BaseApiController
 {
     private readonly IProjectRepository _projectRepository;
     private readonly TimelineService _timelineService;
@@ -29,18 +30,6 @@ public class ProjectController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var projects = await _projectRepository.GetAllAsync();
 
         var result = projects.Select(MapperHelper.ToDto);
@@ -51,29 +40,10 @@ public class ProjectController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var project = await _projectRepository.GetByIdAsync(id);
 
-        if (project is null)
-        {
-            return NotFound(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Not Found",
-                Status = 404,
-                Detail = "Project not found"
-            }));
-        }
+        if (!RequestValidator.NotNull(project))
+            return NotFoundResponse("Project not found");
 
         var dto = MapperHelper.ToDto(project);
 
@@ -83,29 +53,10 @@ public class ProjectController : ControllerBase
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var project = await _projectRepository.GetByIdAsync(id);
 
-        if (project is null)
-        {
-            return NotFound(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Not Found",
-                Status = 404,
-                Detail = "Project not found"
-            }));
-        }
+        if (!RequestValidator.NotNull(project))
+            return NotFoundResponse("Project not found");
 
         var events = await _timelineRepository
             .GetByEntityAsync("Project", id);
@@ -118,27 +69,10 @@ public class ProjectController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequestDto request)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = CurrentUser;
 
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid request",
-                Status = 400,
-                Detail = "Project name is required"
-            }));
-        }
+        if (!RequestValidator.NotEmpty(request.Name))
+            return BadRequestResponse("Project name is required");
 
         var project = new Project(
             0,

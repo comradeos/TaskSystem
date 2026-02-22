@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskSystem.Api.Common;
 using TaskSystem.Api.DTOs;
 using TaskSystem.Api.Helpers;
 using TaskSystem.Api.Services;
@@ -10,7 +11,7 @@ namespace TaskSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/comments")]
-public class CommentController : ControllerBase
+public class CommentController : BaseApiController
 {
     private readonly ICommentRepository _commentRepository;
     private readonly ITaskRepository _taskRepository;
@@ -29,39 +30,15 @@ public class CommentController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCommentRequestDto request)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = CurrentUser;
 
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Content))
-        {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid request",
-                Status = 400,
-                Detail = "Content is required"
-            }));
-        }
+        if (!RequestValidator.NotEmpty(request.Content))
+            return BadRequestResponse("Content is required");
 
         var task = await _taskRepository.GetByIdAsync(request.TaskId);
 
-        if (task is null)
-        {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid task",
-                Status = 400,
-                Detail = "Task does not exist"
-            }));
-        }
+        if (!RequestValidator.NotNull(task))
+            return BadRequestResponse("Task does not exist");
 
         var comment = new Comment(
             0,
@@ -91,29 +68,10 @@ public class CommentController : ControllerBase
     [HttpGet("{taskId:int}")]
     public async Task<IActionResult> GetByTask(int taskId)
     {
-        var user = HttpContext.Items["User"] as User;
-
-        if (user is null)
-        {
-            return Unauthorized(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Unauthorized",
-                Status = 401,
-                Detail = "Session required"
-            }));
-        }
-
         var task = await _taskRepository.GetByIdAsync(taskId);
 
-        if (task is null)
-        {
-            return BadRequest(ApiResponse.Failure(new ProblemDetails
-            {
-                Title = "Invalid task",
-                Status = 400,
-                Detail = "Task does not exist"
-            }));
-        }
+        if (!RequestValidator.NotNull(task))
+            return BadRequestResponse("Task does not exist");
 
         var comments = await _commentRepository.GetByTaskAsync(taskId);
 

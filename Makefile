@@ -1,4 +1,4 @@
-.PHONY: build up down clean logs rebuild migrate
+.PHONY: build up down clean logs rebuild migrate test
 
 build:
 	docker compose build
@@ -22,3 +22,11 @@ logs:
 migrate:
 	docker compose build --no-cache migrator
 	docker compose --profile migrate run --rm migrator
+
+test:
+	docker run --rm \
+		--network tasksystem_default \
+		-v $(PWD)/api:/app \
+		-w /app \
+		mcr.microsoft.com/dotnet/sdk:8.0 \
+		dotnet test Api.sln

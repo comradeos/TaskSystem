@@ -17,7 +17,7 @@ public class AuthService
         _sessionRepository = sessionRepository;
     }
 
-    public async Task<string?> LoginAsync(string login, string password)
+    public async Task<LoginResult?> LoginAsync(string login, string password)
     {
         var user = await _userRepository.GetByLoginAsync(login);
 
@@ -35,7 +35,11 @@ public class AuthService
             token,
             DateTime.UtcNow));
 
-        return token;
+        return new LoginResult(
+            token,
+            user.Id,
+            user.Name,
+            user.IsAdmin);
     }
 
     public async Task LogoutAsync(string token)
