@@ -4,6 +4,7 @@ import { useAuth } from "./useAuth"
 import { authApi } from "../api/auth.api"
 
 function LoginPage() {
+
     const [loginValue, setLoginValue] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState(null)
@@ -14,17 +15,20 @@ function LoginPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+
+        if (loading) return
+
         setError(null)
         setLoading(true)
 
         try {
-            const response = await authApi.login(loginValue, password)
+            const data = await authApi.login(loginValue, password)
 
-            login(response)
+            login(data)
 
-            navigate("/projects")
+            navigate("/projects", { replace: true })
         } catch (err) {
-            setError(err.message || "Login failed")
+            setError(err.message || "Invalid login or password")
         } finally {
             setLoading(false)
         }
@@ -33,12 +37,10 @@ function LoginPage() {
     return (
         <div className="page">
             <div className="page__container">
-
                 <div className="block block--center">
                     <h1>Login</h1>
 
                     <form className="form" onSubmit={handleSubmit}>
-
                         <div className="form__group">
                             <label className="label">Login</label>
                             <input
@@ -73,10 +75,8 @@ function LoginPage() {
                         >
                             {loading ? "Logging in..." : "Login"}
                         </button>
-
                     </form>
                 </div>
-
             </div>
         </div>
     )

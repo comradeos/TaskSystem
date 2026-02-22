@@ -8,22 +8,40 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const stored = localStorage.getItem("user")
-        if (stored) {
-            setUser(JSON.parse(stored))
+
+        if (!stored) return
+
+        try {
+            const parsed = JSON.parse(stored)
+
+            if (parsed?.sessionToken) {
+                setUser(parsed)
+            } else {
+                localStorage.removeItem("user")
+                localStorage.removeItem("sessionToken")
+            }
+        } catch {
+            localStorage.removeItem("user")
+            localStorage.removeItem("sessionToken")
         }
     }, [])
 
-    const login = (loginResponse) => {
+    const login = (data) => {
+
+        if (!data?.sessionToken) {
+            console.error("Invalid login payload", data)
+            return
+        }
 
         const userData = {
-            sessionToken: loginResponse.sessionToken,
-            id: loginResponse.id,
-            name: loginResponse.name,
-            isAdmin: loginResponse.isAdmin
+            sessionToken: data.sessionToken,
+            id: data.id,
+            name: data.name,
+            isAdmin: data.isAdmin
         }
 
         localStorage.setItem("user", JSON.stringify(userData))
-        localStorage.setItem("sessionToken", loginResponse.sessionToken)
+        localStorage.setItem("sessionToken", data.sessionToken)
 
         setUser(userData)
     }
@@ -38,8 +56,8 @@ export function AuthProvider({ children }) {
         <AuthContext.Provider
             value={{
                 user,
-                token: user?.sessionToken,
-                isAuthenticated: !!user,
+                token: user?.sessionToken ?? null,
+                isAuthenticated: !!user?.sessionToken,
                 login,
                 logout
             }}

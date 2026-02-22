@@ -9,7 +9,6 @@ function getErrorMessage(result, fallback) {
     if (result?.data?.title) return result.data.title
     if (result?.error?.detail) return result.error.detail
     if (result?.error?.title) return result.error.title
-
     return fallback
 }
 
@@ -30,26 +29,30 @@ async function request(url, options = {}) {
         headers
     })
 
-    // 401: сессия умерла
-    if (response.status === 401) {
-        localStorage.removeItem("sessionToken")
-        window.location.href = "/login"
-        return
-    }
-
     let result = null
+
     try {
         result = await response.json()
     } catch {
         throw new Error("Server returned invalid JSON")
     }
 
+    if (response.status === 401) {
+        throw new Error(
+            getErrorMessage(result, "Unauthorized")
+        )
+    }
+
     if (!response.ok) {
-        throw new Error(getErrorMessage(result, "Request failed"))
+        throw new Error(
+            getErrorMessage(result, "Request failed")
+        )
     }
 
     if (result?.result === false) {
-        throw new Error(getErrorMessage(result, "Operation failed"))
+        throw new Error(
+            getErrorMessage(result, "Operation failed")
+        )
     }
 
     return result.data

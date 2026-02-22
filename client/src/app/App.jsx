@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import { useAuth } from "../auth/useAuth"
+import ProtectedRoute from "../components/ProtectedRoute"
 
 import LoginPage from "../auth/LoginPage"
 import ProjectsPage from "../projects/ProjectsPage"
 import ProjectDetailsPage from "../projects/ProjectDetailsPage"
 import TaskDetailsPage from "../tasks/TaskDetailsPage"
-import ProtectedRoute from "../components/ProtectedRoute"
 import Layout from "../components/Layout"
 import UsersPage from "../users/UsersPage"
 import TimelinePage from "../timeline/TimelinePage"
@@ -20,7 +20,7 @@ function App() {
         path="/login"
         element={
           isAuthenticated
-            ? <Navigate to="/projects" />
+            ? <Navigate to="/projects" replace />
             : <LoginPage />
         }
       />
@@ -69,8 +69,6 @@ function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/projects" />} />
-
       <Route
         path="/tasks/:id/history"
         element={
@@ -90,6 +88,16 @@ function App() {
               <TimelinePage />
             </Layout>
           </ProtectedRoute>
+        }
+      />
+
+      {/* ВАЖНО: fallback зависит от авторизации */}
+      <Route
+        path="*"
+        element={
+          isAuthenticated
+            ? <Navigate to="/projects" replace />
+            : <Navigate to="/login" replace />
         }
       />
 
