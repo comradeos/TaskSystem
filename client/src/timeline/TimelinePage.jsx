@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { timelineApi } from "../api/timeline.api"
 
@@ -10,12 +10,52 @@ function TimelinePage() {
 
     const [events, setEvents] = useState([])
     const [loading, setLoading] = useState(true)
+    const [users, setUsers] = useState([])
+    const [usersLoading, setUsersLoading] = useState(true)
 
     const isTask = location.pathname.includes("/tasks/")
 
+    const statusMap = useMemo(() => ({
+        1: "Todo",
+        2: "InProgress",
+        3: "Done"
+    }), [])
+
+    const priorityMap = useMemo(() => ({
+        1: "Low",
+        2: "Medium",
+        3: "High"
+    }), [])
+
+    const usersById = useMemo(() => {
+        const map = {}
+        for (const u of users) map[u.id] = u.name
+        return map
+    }, [users])
+
+    useEffect(() => {
+        loadUsers()
+    }, [])
+
     useEffect(() => {
         loadTimeline()
-    }, [id])
+    }, [id, isTask])
+
+    const loadUsers = async () => {
+        try {
+            setUsersLoading(true)
+
+            const response = await fetch("http://localhost:5001/api/users")
+            const json = await response.json()
+
+            const data = json?.data ?? []
+            setUsers(Array.isArray(data) ? data : [])
+        } catch {
+            setUsers([])
+        } finally {
+            setUsersLoading(false)
+        }
+    }
 
     const loadTimeline = async () => {
         try {
@@ -28,12 +68,13 @@ function TimelinePage() {
             const data = response?.data ?? response ?? []
 
             setEvents(
-                data.sort(
-                    (a, b) =>
-                        new Date(b.createdAt) - new Date(a.createdAt)
+                (Array.isArray(data) ? data : []).sort(
+                    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
                 )
             )
-        } catch { } finally {
+        } catch {
+            setEvents([])
+        } finally {
             setLoading(false)
         }
     }
@@ -52,23 +93,43 @@ function TimelinePage() {
         }
     }
 
+    const formatStatus = (value) => {
+        if (value == null) return "-"
+        return statusMap[value] ?? String(value)
+    }
+
+    const formatPriority = (value) => {
+        if (value == null) return "-"
+        return priorityMap[value] ?? String(value)
+    }
+
+    const formatUser = (idValue) => {
+        if (idValue == null) return "None"
+        const name = usersById[idValue]
+        if (name) return name
+        return `User #${idValue}`
+    }
+
     const renderEventDetails = (event) => {
         const parsed = parseEventData(event.data)
-
         if (!parsed) return null
 
         switch (event.eventType) {
 
             case "ProjectCreated":
-                return <div>Project name: <strong>{parsed.Name}</strong></div>
+                return (
+                    <div>
+                        Project name: <strong>{parsed.Name}</strong>
+                    </div>
+                )
 
             case "TaskCreated":
                 return (
                     <div>
                         <div>Title: <strong>{parsed.Title}</strong></div>
-                        <div>Status: {parsed.Status}</div>
-                        <div>Priority: {parsed.Priority}</div>
-                        <div>Assigned User Id: {parsed.AssignedUserId ?? "None"}</div>
+                        <div>Status: {formatStatus(parsed.Status)}</div>
+                        <div>Priority: {formatPriority(parsed.Priority)}</div>
+                        <div>Assigned: {formatUser(parsed.AssignedUserId)}</div>
                     </div>
                 )
 
@@ -82,10 +143,16 @@ function TimelinePage() {
             case "TaskUpdated":
                 return (
                     <div>
-                        {parsed.Status && <div>Status → {parsed.Status}</div>}
-                        {parsed.Priority && <div>Priority → {parsed.Priority}</div>}
+                        {"Status" in parsed && (
+                            <div>Status: {formatStatus(parsed.Status)}</div>
+                        )}
+
+                        {"Priority" in parsed && (
+                            <div>Priority: {formatPriority(parsed.Priority)}</div>
+                        )}
+
                         {"AssignedUserId" in parsed && (
-                            <div>Assigned → {parsed.AssignedUserId ?? "None"}</div>
+                            <div>Assigned: {formatUser(parsed.AssignedUserId)}</div>
                         )}
                     </div>
                 )
@@ -116,6 +183,10 @@ function TimelinePage() {
             </h1>
 
             <div className="block">
+
+                {usersLoading && (
+                    <div className="mb-12">Loading users...</div>
+                )}
 
                 {events.length === 0 && (
                     <div>No history yet</div>
