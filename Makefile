@@ -23,10 +23,17 @@ migrate:
 	docker compose build --no-cache migrator
 	docker compose --profile migrate run --rm migrator
 
+API_DIR := api
+NETWORK := tasksystem_default
+WORKDIR := $(shell pwd)
+
 test:
 	docker run --rm \
-		--network tasksystem_default \
-		-v $(PWD)/api:/app \
+		--network $(NETWORK) \
+		-v $(WORKDIR)/$(API_DIR):/app \
 		-w /app \
 		mcr.microsoft.com/dotnet/sdk:8.0 \
 		dotnet test Api.sln
+
+test_win:
+	docker run --rm --network tasksystem_default -v %cd%\api:/app -w /app mcr.microsoft.com/dotnet/sdk:8.0 dotnet test Api.sln
