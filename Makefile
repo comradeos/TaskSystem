@@ -36,4 +36,9 @@ test:
 		dotnet test Api.sln
 
 test_win:
-	docker run --rm --network tasksystem_default -v %cd%\api:/app -w /app mcr.microsoft.com/dotnet/sdk:8.0 dotnet test Api.sln
+	docker run --rm \
+		--network tasksystem_default \
+		-v "$(CURDIR)/api:/app" \
+		-w /app \
+		mcr.microsoft.com/dotnet/sdk:8.0 \
+		dotnet test Api.sln
