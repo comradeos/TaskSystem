@@ -51,7 +51,7 @@ builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<AuthService>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.UseCors("ClientCorsPolicy");
 
