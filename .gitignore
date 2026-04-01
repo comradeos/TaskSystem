@@ -31,3 +31,5 @@ coverage/
 TestResults/
 
 *.log
+
+tmp
