@@ -535,7 +535,9 @@ INSERT INTO employees (employee_id, emp_name, dept_id, mgr_id, job_id, salary) V
 
 Що станеться, якщо виконати
 ```sql
-
+DELETE
+FROM departments
+WHERE department id = 40;
 ```
 та чому?
 
